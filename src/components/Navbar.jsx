@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import {
-  FiMenu, FiX, FiUser, FiHome, FiBook, FiInfo, FiShoppingCart, FiChevronDown, FiLogOut
+  FiMenu,
+  FiX,
+  FiUser,
+  FiHome,
+  FiBook,
+  FiInfo,
+  FiShoppingCart,
+  FiChevronDown,
+  FiLogOut,
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -30,9 +38,14 @@ const Navbar = ({ isAdmin }) => {
       if (user) {
         try {
           const userDoc = await getDoc(doc(db, "userProfiles", user.uid));
-          setUserData(userDoc.exists() ? userDoc.data() : { 
-            name: user.displayName || "User", email: user.email || "" 
-          });
+          setUserData(
+            userDoc.exists()
+              ? userDoc.data()
+              : {
+                  name: user.displayName || "User",
+                  email: user.email || "",
+                }
+          );
         } catch (error) {
           console.error("Error fetching user data:", error);
         } finally {
@@ -49,7 +62,7 @@ const Navbar = ({ isAdmin }) => {
 
   useEffect(() => {
     const currentPath = location.pathname;
-    const currentItem = menuItems.find(item => item.path === currentPath);
+    const currentItem = menuItems.find((item) => item.path === currentPath);
     if (currentItem) setActiveItem(currentItem.name);
   }, [location.pathname]);
 
@@ -61,8 +74,13 @@ const Navbar = ({ isAdmin }) => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (isOpen && !e.target.closest(".mobile-menu-container")) setIsOpen(false);
-      if (showProfileDropdown && !e.target.closest(".profile-dropdown-container")) setShowProfileDropdown(false);
+      if (isOpen && !e.target.closest(".mobile-menu-container"))
+        setIsOpen(false);
+      if (
+        showProfileDropdown &&
+        !e.target.closest(".profile-dropdown-container")
+      )
+        setShowProfileDropdown(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -89,7 +107,9 @@ const Navbar = ({ isAdmin }) => {
       <div className="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 w-[90%] md:w-4/5 lg:w-3/4 bg-black/75 backdrop-blur-md rounded-2xl py-4 px-6 flex justify-between items-center border border-orange-500/20">
         <div className="cursor-pointer relative">
           <span className="text-2xl font-bold text-white relative">
-            <span className="bg-gradient-to-r from-orange-500 via-yellow-400 to-orange-500 bg-clip-text text-transparent">Munch</span>
+            <span className="bg-gradient-to-r from-orange-500 via-yellow-400 to-orange-500 bg-clip-text text-transparent">
+              Munch
+            </span>
             <span className="text-white">Mate</span>
           </span>
         </div>
@@ -113,17 +133,19 @@ const Navbar = ({ isAdmin }) => {
       <div className="flex justify-between items-center w-full px-6 py-3">
         {/* Logo */}
         <div onClick={() => navigate("/home")} className="cursor-pointer">
-          <span className="text-2xl font-bold text-white">
-            <span className="bg-gradient-to-r from-orange-500 via-yellow-400 to-orange-500 bg-clip-text text-transparent">Munch</span>
+          <span className="text-2xl font-bold text-white flex items-center">
+            <span className="bg-gradient-to-r from-orange-500 via-yellow-400 to-orange-500 bg-clip-text text-transparent">
+              Munch
+            </span>
             <span className="text-white">Mate</span>
-            <span className="absolute -top-2 -right-4 text-orange-500 text-lg">🔥</span>
+            <span className="absolute top-0.5 left-38 text-lg ml-1">🔥</span>
           </span>
         </div>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex space-x-10">
           {menuItems.map((item) => (
-            <a 
+            <a
               key={item.name}
               onClick={() => handleNavigation(item.name, item.path)}
               className={`flex items-center space-x-2 relative font-medium cursor-pointer ${
@@ -156,7 +178,11 @@ const Navbar = ({ isAdmin }) => {
               >
                 <FiUser />
                 <span>Profile</span>
-                <FiChevronDown className={`transition-transform ${showProfileDropdown ? "rotate-180" : ""}`} />
+                <FiChevronDown
+                  className={`transition-transform ${
+                    showProfileDropdown ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
               {showProfileDropdown && (
@@ -225,12 +251,14 @@ const Navbar = ({ isAdmin }) => {
                 <span>{item.name}</span>
               </a>
             ))}
-            
+
             <a
               onClick={() => navigate("/profile")}
               className="flex items-center space-x-3 py-2 px-3 rounded-lg text-gray-300 hover:bg-orange-500/10 hover:text-orange-400"
             >
-              <span className="text-lg"><FiUser /></span>
+              <span className="text-lg">
+                <FiUser />
+              </span>
               <span>View Profile</span>
             </a>
           </div>
