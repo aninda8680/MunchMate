@@ -2,7 +2,7 @@
 
 MunchMate is a modern web application for online food ordering and pick-up, built specifically for university students. It provides a seamless experience for browsing menus, placing orders, and managing food services.
 
-## Features ✨
+## Features✨
 
 - **User Authentication**: Secure sign-up and sign-in system with university email verification
 - **Smart Menu Management**: Browse and search available food items
