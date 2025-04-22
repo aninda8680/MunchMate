@@ -10,13 +10,15 @@ import {
   BookOpen,
   ChevronRight,
   ChevronLeft,
+  Lock,
+  Send,
 } from "lucide-react";
 import { auth, db } from "../config"; // Adjust path as needed
 import { doc, setDoc } from "firebase/firestore";
 import Aurora from "./Aurora"; // Import the Aurora component
 
 const UserDetails = () => {
-  // Form steps - 0: Basic Info, 1: Academic Info, 2: Contact Info
+  // Form steps - 0: Basic Info, 1: Academic Info, 2: Contact Info, 3: OTP Verification
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     name: "",
@@ -26,6 +28,7 @@ const UserDetails = () => {
     semester: "",
     rollNumber: "",
     contactNumber: "",
+    otp: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -33,6 +36,10 @@ const UserDetails = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [availableCourses, setAvailableCourses] = useState([]);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [countdown, setCountdown] = useState(0);
 
   // Comprehensive list of departments and courses
   const departmentsWithCourses = {
@@ -84,6 +91,15 @@ const UserDetails = () => {
     }
   }, [formData.department]);
 
+  // Countdown timer for OTP resend
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   const validateStep = () => {
     const newErrors = {};
 
@@ -110,16 +126,26 @@ const UserDetails = () => {
         newErrors.semester = "Please select your semester";
       }
     } else if (currentStep === 2) {
-      // Validate Roll Number
+      // Validate Roll Number - added check for length > 5
       if (!formData.rollNumber.trim()) {
         newErrors.rollNumber = "Roll number is required";
+      } else if (formData.rollNumber.trim().length < 6) {
+        newErrors.rollNumber = "Please enter your full roll number (min 6 characters)";
       }
+      
       // Validate Contact Number
       if (!formData.contactNumber.trim()) {
         newErrors.contactNumber = "Contact number is required";
       } else if (!/^\d{10}$/.test(formData.contactNumber)) {
         newErrors.contactNumber =
           "Please enter a valid 10-digit contact number";
+      }
+    } else if (currentStep === 3) {
+      // Validate OTP
+      if (!formData.otp.trim()) {
+        newErrors.otp = "OTP is required";
+      } else if (formData.otp !== generatedOtp) {
+        newErrors.otp = "Invalid OTP. Please try again.";
       }
     }
 
@@ -148,11 +174,16 @@ const UserDetails = () => {
     }
     if (!formData.rollNumber.trim()) {
       allErrors.rollNumber = "Roll number is required";
+    } else if (formData.rollNumber.trim().length < 6) {
+      allErrors.rollNumber = "Please enter your full roll number (min 6 characters)";
     }
     if (!formData.contactNumber.trim()) {
       allErrors.contactNumber = "Contact number is required";
     } else if (!/^\d{10}$/.test(formData.contactNumber)) {
       allErrors.contactNumber = "Please enter a valid 10-digit contact number";
+    }
+    if (!otpVerified) {
+      allErrors.otp = "Please verify your contact number with OTP";
     }
 
     setErrors(allErrors);
@@ -169,7 +200,12 @@ const UserDetails = () => {
 
   const handleNextStep = () => {
     if (validateStep()) {
-      setCurrentStep(currentStep + 1);
+      // If we're moving to the OTP step and OTP hasn't been verified yet
+      if (currentStep === 2 && !otpVerified) {
+        setCurrentStep(3);
+      } else {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -177,9 +213,47 @@ const UserDetails = () => {
     setCurrentStep(currentStep - 1);
   };
 
+  // Generate and send OTP
+  const handleSendOTP = () => {
+    if (!/^\d{10}$/.test(formData.contactNumber)) {
+      setErrors({
+        ...errors,
+        contactNumber: "Please enter a valid 10-digit contact number",
+      });
+      return;
+    }
+
+    // Generate a random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedOtp(otp);
+    setOtpSent(true);
+    setCountdown(60); // Set countdown for 60 seconds
+    
+    // In a real application, you would send this OTP via SMS
+    console.log(`OTP sent to ${formData.contactNumber}: ${otp}`);
+    
+    // For development, alert the OTP (remove in production)
+    alert(`Your OTP is: ${otp} (This alert is only for development)`);
+  };
+
+  // Verify OTP
+  const handleVerifyOTP = () => {
+    if (formData.otp === generatedOtp) {
+      setOtpVerified(true);
+      setErrors({...errors, otp: ""});
+    } else {
+      setErrors({...errors, otp: "Invalid OTP. Please try again."});
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError(null);
+
+    if (!otpVerified) {
+      setSubmitError("Please verify your contact number with OTP");
+      return;
+    }
 
     if (validateAllSteps()) {
       setIsLoading(true);
@@ -201,6 +275,7 @@ const UserDetails = () => {
           semester: formData.semester,
           rollNumber: formData.rollNumber,
           contactNumber: formData.contactNumber,
+          contactVerified: true,
           createdAt: new Date(),
         });
 
@@ -225,7 +300,7 @@ const UserDetails = () => {
 
   // Step indicator/progress bar
   const ProgressBar = () => {
-    const steps = ["Basic Info", "Academic Details", "Contact Info"];
+    const steps = ["Basic Info", "Academic Details", "Contact Info", "Verify OTP"];
 
     return (
       <div className="flex justify-between mb-6 px-2">
@@ -254,7 +329,7 @@ const UserDetails = () => {
           <div className="h-1 bg-gray-700 w-4/5 relative">
             <div
               className="h-full bg-orange-500 absolute top-0 left-0 transition-all duration-300"
-              style={{ width: `${(currentStep / 2) * 100}%` }}
+              style={{ width: `${(currentStep / 3) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -573,6 +648,105 @@ const UserDetails = () => {
                 </div>
               )}
             </div>
+
+            {otpVerified && (
+              <div className="flex items-center text-green-500 mt-2">
+                <CheckCircle size={18} className="mr-2" />
+                <span>Contact number verified successfully</span>
+              </div>
+            )}
+          </motion.div>
+        );
+      case 3:
+        return (
+          <motion.div
+            initial={{ opacity: 0, x: 100 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -100 }}
+            className="space-y-6"
+          >
+            {/* OTP Verification */}
+            <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+              <h3 className="text-lg font-medium text-orange-500 mb-2">
+                Verify Your Contact Number
+              </h3>
+              <p className="text-gray-300 text-sm mb-4">
+                We'll send a verification code to {formData.contactNumber}
+              </p>
+
+              {!otpSent ? (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleSendOTP}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg flex items-center justify-center w-full"
+                >
+                  <Send size={18} className="mr-2" />
+                  Send OTP
+                </motion.button>
+              ) : otpVerified ? (
+                <div className="flex items-center text-green-500 mt-2">
+                  <CheckCircle size={18} className="mr-2" />
+                  <span>Contact number verified successfully</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="mb-4">
+                    <label className="block text-gray-300 text-sm mb-2">
+                      Enter OTP
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock size={18} className="text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        name="otp"
+                        value={formData.otp}
+                        onChange={handleChange}
+                        placeholder="6-digit OTP"
+                        maxLength={6}
+                        className={`w-full p-3 pl-10 rounded-lg border bg-gray-900 text-white ${
+                          errors.otp
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-700 focus:ring-orange-500"
+                        } focus:outline-none focus:ring-2`}
+                      />
+                    </div>
+                    {errors.otp && (
+                      <div className="text-red-500 text-sm mt-1 flex items-center">
+                        <AlertTriangle size={16} className="mr-2" />
+                        {errors.otp}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex space-x-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleVerifyOTP}
+                      className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg flex items-center justify-center"
+                    >
+                      <CheckCircle size={18} className="mr-2" />
+                      Verify OTP
+                    </motion.button>
+
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleSendOTP}
+                      disabled={countdown > 0}
+                      className={`px-4 py-2 bg-gray-700 text-white rounded-lg flex items-center justify-center ${
+                        countdown > 0 ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      {countdown > 0 ? `Resend in ${countdown}s` : "Resend OTP"}
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+            </div>
           </motion.div>
         );
       default:
@@ -584,6 +758,7 @@ const UserDetails = () => {
     "Basic Information",
     "Academic Details",
     "Contact Details",
+    "OTP Verification",
   ];
 
   return (
@@ -671,7 +846,7 @@ const UserDetails = () => {
                     <div></div>
                   )}
 
-                  {currentStep < 2 ? (
+                  {currentStep < 3 ? (
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -686,9 +861,9 @@ const UserDetails = () => {
                       whileHover={!isLoading ? { scale: 1.05 } : {}}
                       whileTap={!isLoading ? { scale: 0.95 } : {}}
                       onClick={handleSubmit}
-                      disabled={isLoading}
+                      disabled={isLoading || !otpVerified}
                       className={`px-6 py-2 bg-gradient-to-r from-orange-600 to-orange-500 text-white font-bold rounded-lg shadow-md hover:shadow-lg transition duration-300 flex items-center ${
-                        isLoading ? "opacity-70 cursor-not-allowed" : ""
+                        isLoading || !otpVerified ? "opacity-70 cursor-not-allowed" : ""
                       }`}
                     >
                       {isLoading ? (
@@ -715,6 +890,8 @@ const UserDetails = () => {
                           </svg>
                           Saving...
                         </>
+                      ) : !otpVerified ? (
+                        "Verify OTP to Continue"
                       ) : (
                         "Complete Profile"
                       )}
