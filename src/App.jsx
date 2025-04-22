@@ -16,6 +16,7 @@ import "./App.css";
 import About from "./components/About";
 import Payment from "./components/Payment";
 import UserProfile from "./components/UserProfile";
+import Orders from "./components/Orders";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -51,7 +52,7 @@ function App() {
           <Route path="/userdetails" element={<UserDetails />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/profile" element={<UserProfile />} />
-          
+          <Route path="/orders" element={<Orders/>} />
           {/* Auth routes */}
           <Route path="/signup" element={<SignUp />} />
           <Route path="/signin" element={<SignIn />} />
