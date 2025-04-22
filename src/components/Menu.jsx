@@ -219,7 +219,7 @@ const Menu = () => {
                           : "bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent"
                       }`}
                     >
-                      ${item.price?.toFixed(2) || "9.99"}
+                      Rs {item.price?.toFixed(2) || "9.99"}
                     </div>
                   </div>
                   {!isUnavailable && (
