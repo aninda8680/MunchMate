@@ -2,33 +2,36 @@ import React, { useRef, useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiTruck } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiCheckCircle,
+  FiAlertCircle,
+} from "react-icons/fi";
 import Squares from "./Squares";
 import QRCode from "react-qr-code";
 import { db, auth } from "../config"; // Import Firebase db and auth
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit, 
-  doc, 
-  getDoc
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  doc,
+  getDoc,
 } from "firebase/firestore"; // Import Firestore functions
 
 const Invoice = () => {
   const { cart } = useCart();
   const invoiceRef = useRef(null);
-  const [paymentId, setPaymentId] = useState(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [invoiceSaved, setInvoiceSaved] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [error, setError] = useState(null);
-  const [deliveryStatus, setDeliveryStatus] = useState("Not Delivered"); // Default delivery status
-  
+  const [deliveryStatus, setDeliveryStatus] = useState("Not Given"); // Simplified status
+
   // Group identical items together
   const groupedItems = cart.reduce((acc, item) => {
     const existingItem = acc.find((i) => i.id === item.id);
@@ -40,10 +43,12 @@ const Invoice = () => {
     return acc;
   }, []);
 
-  const totalPrice = cart.reduce((total, item) => total + item.price, 0).toFixed(2);
+  const totalPrice = cart
+    .reduce((total, item) => total + item.price, 0)
+    .toFixed(2);
   const currentDate = new Date().toLocaleDateString("en-GB");
 
-  // Fetch user details from Firestore (using the same pattern as UserProfile)
+  // Fetch user details from Firestore
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
@@ -55,11 +60,11 @@ const Invoice = () => {
           setIsLoading(false);
           return;
         }
-        
-        // Use userProfiles collection as shown in UserProfile component
+
+        // Use userProfiles collection
         const userDocRef = doc(db, "userProfiles", user.uid);
         const userSnapshot = await getDoc(userDocRef);
-        
+
         if (userSnapshot.exists()) {
           setUserDetails(userSnapshot.data());
         } else {
@@ -67,45 +72,49 @@ const Invoice = () => {
           setUserDetails({
             name: user.displayName || user.email || "Guest User",
             email: user.email || "No email provided",
-            uid: user.uid
+            uid: user.uid,
           });
-          
+
           console.log("No user profile document found");
         }
       } catch (error) {
         console.error("Error fetching user details:", error);
         setError("Failed to load user details. Using limited information.");
-        
+
         // Use auth information as fallback if Firestore fails
         const user = auth.currentUser;
         if (user) {
           setUserDetails({
             name: user.displayName || user.email || "Guest User",
             email: user.email || "No email provided",
-            uid: user.uid
+            uid: user.uid,
           });
         }
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     fetchUserDetails();
   }, []);
 
-  // Get the latest invoice number and payment ID from session storage
+  // Get the latest invoice number
   useEffect(() => {
     const fetchLatestInvoiceNumber = async () => {
       try {
         // First try to get the invoice number from Firestore
         let nextSerialNumber = 1; // Default start
-        
+
         try {
           // Query to get the last invoice ordered by invoice number (descending)
           const invoicesRef = collection(db, "invoices");
-          const q = query(invoicesRef, orderBy("serialNumber", "desc"), limit(1));
+          const q = query(
+            invoicesRef,
+            orderBy("serialNumber", "desc"),
+            limit(1)
+          );
           const querySnapshot = await getDocs(q);
-          
+
           if (!querySnapshot.empty) {
             const latestInvoice = querySnapshot.docs[0].data();
             nextSerialNumber = latestInvoice.serialNumber + 1;
@@ -114,28 +123,29 @@ const Invoice = () => {
           console.error("Firestore query failed:", firebaseError);
           // Continue with the default invoice number if Firestore fails
         }
-        
+
         // Format invoice number
-        const formattedInvoiceNumber = `INV-${nextSerialNumber.toString().padStart(4, '0')}`;
+        const formattedInvoiceNumber = `INV-${nextSerialNumber
+          .toString()
+          .padStart(4, "0")}`;
         setInvoiceNumber(formattedInvoiceNumber);
-        
-        // Get payment ID from session storage
-        const storedPaymentId = sessionStorage.getItem("paymentId");
-        if (storedPaymentId) {
-          setPaymentId(storedPaymentId);
-        }
-        
+
         setIsLoading(false);
-        
+
         // Save the invoice to Firebase if we have items in cart
         if (cart.length > 0 && userDetails) {
-          saveInvoiceToFirebase(nextSerialNumber, formattedInvoiceNumber);
+          saveInvoiceToFirebase(
+            nextSerialNumber,
+            formattedInvoiceNumber
+          );
         }
       } catch (error) {
         console.error("Error in invoice process:", error);
         // Fallback to random number if everything fails
-        const randomInvoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
-        setInvoiceNumber(randomInvoiceNumber);
+        const randomNumber = Math.floor(Math.random() * 10000)
+          .toString()
+          .padStart(4, "0");
+        setInvoiceNumber(`INV-${randomNumber}`);
         setIsLoading(false);
       }
     };
@@ -181,33 +191,38 @@ const Invoice = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     // Only fetch invoice number when user details are available
     if (userDetails) {
       fetchLatestInvoiceNumber();
     } else if (!isLoading) {
       // Generate a random invoice number if we don't have user details
-      const randomInvoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
-      setInvoiceNumber(randomInvoiceNumber);
+      const randomNumber = Math.floor(Math.random() * 10000)
+        .toString()
+        .padStart(4, "0");
+      setInvoiceNumber(`INV-${randomNumber}`);
     }
   }, [cart, userDetails, isLoading]);
 
   // Save invoice data to Firebase
-  const saveInvoiceToFirebase = async (serialNumber, formattedInvoiceNumber) => {
+  const saveInvoiceToFirebase = async (
+    serialNumber,
+    formattedInvoiceNumber
+  ) => {
     if (invoiceSaved || cart.length === 0 || !userDetails) return;
-    
+
     setIsSaving(true);
-    
+
     try {
       // Calculate subtotals for each item
-      const items = groupedItems.map(item => ({
+      const items = groupedItems.map((item) => ({
         id: item.id,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
-        subtotal: item.price * item.quantity
+        subtotal: item.price * item.quantity,
       }));
-      
+
       // Create invoice data object with user details
       const invoiceData = {
         serialNumber: serialNumber,
@@ -218,21 +233,20 @@ const Invoice = () => {
           uid: userDetails.uid || "guest",
           name: userDetails.name || "Guest User",
           email: userDetails.email || "Unknown",
-          rollNumber: userDetails.rollNumber || "Unknown",
           contactNumber: userDetails.contactNumber || "Unknown",
+          // Student specific fields if needed
+          rollNumber: userDetails.rollNumber || "Unknown",
           department: userDetails.department || "Unknown",
           section: userDetails.section || "Unknown",
-          semester: userDetails.semester || "Unknown"
+          semester: userDetails.semester || "Unknown",
         },
         items: items,
-        subtotal: parseFloat(totalPrice),
-        tax: 0,
         totalAmount: parseFloat(totalPrice),
-        paymentId: paymentId || null,
-        deliveryStatus: deliveryStatus, // Using delivery status instead of payment status
-        createdAt: new Date()
+        deliveryStatus: deliveryStatus,
+        orderType: "Takeaway",
+        createdAt: new Date(),
       };
-      
+
       // Add to Firestore
       try {
         const invoicesRef = collection(db, "invoices");
@@ -242,24 +256,32 @@ const Invoice = () => {
       } catch (firebaseError) {
         console.error("Firestore save failed:", firebaseError);
         // Store in local storage as fallback
-        localStorage.setItem(`invoice_${formattedInvoiceNumber}`, JSON.stringify(invoiceData));
+        localStorage.setItem(
+          `invoice_${formattedInvoiceNumber}`,
+          JSON.stringify(invoiceData)
+        );
         console.log("Invoice saved to local storage as fallback");
         setInvoiceSaved(true);
       }
     } catch (error) {
       console.error("Error processing invoice data:", error);
-      setError("Failed to save invoice to database. A local copy has been stored.");
-      
+      setError(
+        "Failed to save invoice to database. A local copy has been stored."
+      );
+
       // Store in local storage as ultimate fallback
       try {
-        localStorage.setItem(`invoice_emergency_${Date.now()}`, JSON.stringify({
-          invoiceNumber: formattedInvoiceNumber,
-          date: currentDate,
-          customerName: userDetails?.name || "Guest",
-          items: groupedItems,
-          total: totalPrice,
-          deliveryStatus: deliveryStatus
-        }));
+        localStorage.setItem(
+          `invoice_emergency_${Date.now()}`,
+          JSON.stringify({
+            invoiceNumber: formattedInvoiceNumber,
+            date: currentDate,
+            customerName: userDetails?.name || "Guest",
+            items: groupedItems,
+            total: totalPrice,
+            deliveryStatus: deliveryStatus,
+          })
+        );
       } catch (localStorageError) {
         console.error("Even local storage failed:", localStorageError);
       }
@@ -268,25 +290,21 @@ const Invoice = () => {
     }
   };
 
-  const handlePrint = () => {
-    const printContent = invoiceRef.current.innerHTML;
-    const originalContent = document.body.innerHTML;
-    document.body.innerHTML = printContent;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
-  };
-
-  const handleDownload = () => {
-    alert(
-      "In a real app, this would generate a PDF for download. Use a library like jsPDF or html2pdf."
-    );
+  const getStatusIcon = () => {
+    switch (deliveryStatus.toLowerCase()) {
+      case "delivered":
+        return <FiCheckCircle className="text-green-500" />;
+      case "not delivered":
+        return <FiAlertCircle className="text-yellow-500" />;
+      default:
+        return <FiAlertCircle className="text-yellow-500" />;
+    }
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen w-full bg-black flex items-center justify-center">
-        <div className="text-gray-300">Loading invoice...</div>
+        <div className="text-gray-300">Loading your order receipt...</div>
       </div>
     );
   }
@@ -313,26 +331,14 @@ const Invoice = () => {
           {/* Header Buttons - hidden on print */}
           <div className="flex items-center justify-between mb-6 no-print">
             <Link
-              to="/payment"
+              to="/menu"
               className="text-gray-300 hover:text-gray-100 font-medium flex items-center"
             >
-              <FiArrowLeft className="mr-2" /> Back to Payment
+              <FiArrowLeft className="mr-2" /> Back to Menu
             </Link>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-100">Invoice</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={handlePrint}
-                className="px-4 py-2 rounded-lg border border-gray-600 text-gray-400 font-medium hover:bg-gray-900 transition-all duration-300 flex items-center"
-              >
-                <FiPrinter className="mr-2" /> Print
-              </button>
-              <button
-                onClick={handleDownload}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white font-medium hover:from-gray-700 hover:to-gray-600 transition-all duration-300 flex items-center"
-              >
-                <FiDownload className="mr-2" /> Download
-              </button>
-            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-100">
+              Order Receipt
+            </h2>
           </div>
 
           {/* Error and Status Messages - hidden on print */}
@@ -342,23 +348,23 @@ const Invoice = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           {isSaving && (
             <div className="bg-yellow-900 bg-opacity-40 text-yellow-200 rounded-lg p-2 mb-4 text-center no-print">
-              Saving invoice to database...
+              Processing your order...
             </div>
           )}
-          
+
           {invoiceSaved && (
             <div className="bg-green-900 bg-opacity-40 text-green-200 rounded-lg p-2 mb-4 text-center no-print">
-              Invoice successfully saved to database
+              Order successfully saved!
             </div>
           )}
 
           {/* Invoice Content */}
           {cart.length === 0 ? (
             <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-8 text-center border border-gray-800">
-              <p className="text-gray-400 text-lg mb-6">No items to invoice</p>
+              <p className="text-gray-400 text-lg mb-6">Your cart is empty</p>
               <Link
                 to="/menu"
                 className="px-6 py-3 rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white font-medium hover:from-gray-700 hover:to-gray-600 transition-all duration-300"
@@ -374,8 +380,12 @@ const Invoice = () => {
               {/* Invoice Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-4 border-b border-gray-800">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-100">INVOICE</h1>
-                  <p className="text-gray-400">{invoiceNumber}</p>
+                  <h1 className="text-2xl font-bold text-gray-100">
+                    TAKEAWAY ORDER
+                  </h1>
+                  <p className="text-gray-400 text-sm">
+                    Invoice #: {invoiceNumber}
+                  </p>
                 </div>
                 <div className="mt-4 md:mt-0 text-right">
                   <p className="font-bold text-gray-300">Date:</p>
@@ -383,36 +393,38 @@ const Invoice = () => {
                 </div>
               </div>
 
-              {/* From / To */}
+              {/* Customer Information */}
               <div className="flex flex-col md:flex-row justify-between mb-8">
-                <div>
-                  <h2 className="font-bold text-gray-300 mb-2">From:</h2>
-                  <p className="text-gray-400">Your Business Name</p>
-                  <p className="text-gray-400">123 Business Street</p>
-                  <p className="text-gray-400">City, State, ZIP</p>
-                  <p className="text-gray-400">contact@yourbusiness.com</p>
-                </div>
                 <div className="mt-4 md:mt-0">
-                  <h2 className="font-bold text-gray-300 mb-2">To:</h2>
+                  <h2 className="font-bold text-gray-300 mb-2">Customer:</h2>
                   {userDetails ? (
                     <>
                       <p className="text-gray-400">{userDetails.name}</p>
-                      <p className="text-gray-400">Roll No: {userDetails.rollNumber}</p>
-                      {userDetails.department && <p className="text-gray-400">{userDetails.department}</p>}
-                      {(userDetails.section || userDetails.semester) && (
+                      {userDetails.contactNumber && (
                         <p className="text-gray-400">
-                          {userDetails.section && `Section: ${userDetails.section}`}
-                          {userDetails.section && userDetails.semester && ', '}
-                          {userDetails.semester && userDetails.semester}
+                          Phone: {userDetails.contactNumber}
                         </p>
                       )}
-                      <p className="text-gray-400">{userDetails.email}</p>
-                      {userDetails.contactNumber && <p className="text-gray-400">Contact: {userDetails.contactNumber}</p>}
+                      {userDetails.email && (
+                        <p className="text-gray-400">{userDetails.email}</p>
+                      )}
+                      {userDetails.rollNumber && (
+                        <p className="text-gray-400">
+                          Roll No: {userDetails.rollNumber}
+                        </p>
+                      )}
+                      {userDetails.department && (
+                        <p className="text-gray-400">
+                          {userDetails.department}
+                        </p>
+                      )}
                     </>
                   ) : (
                     <>
                       <p className="text-gray-400">Guest Customer</p>
-                      <p className="text-gray-400">Guest Details Not Available</p>
+                      <p className="text-gray-400">
+                        Guest Details Not Available
+                      </p>
                     </>
                   )}
                 </div>
@@ -423,10 +435,18 @@ const Invoice = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-800">
-                      <th className="text-left py-3 px-2 text-gray-300">Item</th>
-                      <th className="text-center py-3 px-2 text-gray-300">Quantity</th>
-                      <th className="text-right py-3 px-2 text-gray-300">Price</th>
-                      <th className="text-right py-3 px-2 text-gray-300">Amount</th>
+                      <th className="text-left py-3 px-2 text-gray-300">
+                        Item
+                      </th>
+                      <th className="text-center py-3 px-2 text-gray-300">
+                        Quantity
+                      </th>
+                      <th className="text-right py-3 px-2 text-gray-300">
+                        Price
+                      </th>
+                      <th className="text-right py-3 px-2 text-gray-300">
+                        Amount
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -442,8 +462,12 @@ const Invoice = () => {
                             <span className="text-gray-300">{item.name}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-2 text-center text-gray-300">{item.quantity}</td>
-                        <td className="py-3 px-2 text-right text-gray-300">₹{item.price}</td>
+                        <td className="py-3 px-2 text-center text-gray-300">
+                          {item.quantity}
+                        </td>
+                        <td className="py-3 px-2 text-right text-gray-300">
+                          ₹{item.price}
+                        </td>
                         <td className="py-3 px-2 text-right text-gray-300">
                           ₹{(item.price * item.quantity).toFixed(2)}
                         </td>
@@ -453,87 +477,46 @@ const Invoice = () => {
                 </table>
               </div>
 
-              {/* Totals */}
+              {/* Totals - Simplified */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/3">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium text-gray-300">Subtotal:</span>
-                    <span className="text-gray-300">₹{totalPrice}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium text-gray-300">Tax (0%):</span>
-                    <span className="text-gray-300">₹0.00</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-t border-gray-800 font-bold">
+                  <div className="flex justify-between py-2 font-bold">
                     <span className="text-gray-200">Total:</span>
                     <span className="text-gray-100">₹{totalPrice}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Delivery Status */}
+              {/* Order Status - Simplified */}
               <div className="mt-8 pt-4 border-t border-gray-800">
-                <div className="flex flex-col items-center mb-4">
+                <div className="flex flex-col items-center">
                   <div className="flex items-center mb-4">
-                    <FiTruck className="text-yellow-500 mr-2" size={24} />
-                    <span className="text-yellow-500 font-medium">Order Status: {deliveryStatus}</span>
+                    {getStatusIcon()}
+                    <span
+                      className={`font-medium ml-2 ${
+                        deliveryStatus.toLowerCase() === "delivered"
+                          ? "text-green-500"
+                          : "text-yellow-500"
+                      }`}
+                    >
+                      Status: {deliveryStatus}
+                    </span>
                   </div>
-                  {paymentId && (
-                    <p className="text-gray-400">Payment ID: {paymentId}</p>
-                  )}
-                  {paymentId && (
-                    <div className="mt-4 p-4 bg-white rounded">
-                      <QRCode value={paymentId} size={128} className="qr-code" />
-                    </div>
-                  )}
-                  <div className="mt-4 p-4 border border-gray-700 rounded-lg bg-gray-900">
-                    <p className="text-gray-400 text-center text-sm">
-                      This invoice serves as proof of order. Please keep it for your records.
+
+                  <div className="mt-4">
+                    <QRCode
+                      value={`${invoiceNumber}|${currentDate}`}
+                      size={128}
+                      className="qr-code bg-white p-2 rounded"
+                    />
+                    <p className="text-gray-400 text-center mt-2 text-sm">
+                      Scan to verify order
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Student Details Verification */}
-              {userDetails && userDetails.rollNumber && userDetails.rollNumber !== "Unknown" && (
-                <div className="mt-8 pt-4 border-t border-gray-800">
-                  <h2 className="font-bold text-gray-300 mb-2">Student Verification:</h2>
-                  <div className="flex flex-col md:flex-row justify-between items-start text-gray-400">
-                    <div className="flex flex-col">
-                      <span><strong>Name:</strong> {userDetails.name}</span>
-                      <span><strong>Roll Number:</strong> {userDetails.rollNumber}</span>
-                      {userDetails.course && <span><strong>Course:</strong> {userDetails.course}</span>}
-                    </div>
-                    <div className="flex flex-col mt-4 md:mt-0">
-                      {userDetails.department && <span><strong>Department:</strong> {userDetails.department}</span>}
-                      {userDetails.section && <span><strong>Section:</strong> {userDetails.section}</span>}
-                      {userDetails.semester && <span><strong>Semester:</strong> {userDetails.semester}</span>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Delivery Instructions */}
-              <div className="mt-8 pt-4 border-t border-gray-800">
-                <h2 className="font-bold text-gray-300 mb-2">Delivery Instructions:</h2>
-                <p className="text-gray-400">
-                  Your order will be delivered to your specified location.
-                </p>
-                <p className="text-gray-400 mt-2">
-                  For any questions about your delivery, please contact our support team.
-                </p>
-              </div>
-
-              {/* T&Cs */}
-              <div className="mt-8 pt-4 border-t border-gray-800">
-                <h2 className="font-bold text-gray-300 mb-2">Terms & Conditions:</h2>
-                <ul className="text-gray-400 list-disc pl-5 space-y-1">
-                  <li>Payment is due upon receipt.</li>
-                  <li>This invoice is automatically generated.</li>
-                  <li>All items are non-refundable after consumption.</li>
-                  <li>Please check your order details before confirming delivery.</li>
-                </ul>
-              </div>
+              
             </div>
           )}
         </div>

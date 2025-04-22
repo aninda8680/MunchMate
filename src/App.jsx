@@ -1,30 +1,24 @@
-import { useState, useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import { useEffect, useState } from "react";
 import UserNavbar from "./components/Navbar";
-import AdminNavbar from "./components/AdminNavbar";
 import Hero from "./components/Hero";
 import Menu from "./components/Menu";
-import AdminMenu from "./components/AdminMenu";
 import Cart from "./components/Cart";
 import { CartProvider } from "./context/CartContext";
 import SignUp from "./components/SignUp";
 import SignIn from "./components/SignIn";
 import UserDetails from "./components/UserDetails";
-import Invoice from './components/Invoice';
+import Invoice from "./components/Invoice";
 import Landing from "./components/Landing";
-import "./App.css";
 import About from "./components/About";
 import Payment from "./components/Payment";
 import UserProfile from "./components/UserProfile";
+import Orders from "./components/Orders";
+import "./App.css";
 
 function App() {
-  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    const isAdminPath = location.pathname.includes("/admin");
-    setIsAdmin(isAdminPath);
-  }, [location]);
 
   // Check if current path is the landing page, sign in, or sign up page
   const isLandingPage = location.pathname === "/";
@@ -33,15 +27,13 @@ function App() {
   return (
     <CartProvider>
       <div className="App">
-        {/* Render appropriate Navbar based on path */}
-        {!isLandingPage && !isAuthPage && (
-          isAdmin ? <AdminNavbar /> : <UserNavbar />
-        )}
-        
+        {/* Show user navbar if not on landing or auth pages */}
+        {!isLandingPage && !isAuthPage && <UserNavbar />}
+
         <Routes>
           {/* Landing route */}
           <Route path="/" element={<Landing />} />
-          
+
           {/* User routes */}
           <Route path="/home" element={<Hero />} />
           <Route path="/menu" element={<Menu />} />
@@ -51,13 +43,11 @@ function App() {
           <Route path="/userdetails" element={<UserDetails />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/profile" element={<UserProfile />} />
-          
+          <Route path="/orders" element={<Orders />} />
+
           {/* Auth routes */}
           <Route path="/signup" element={<SignUp />} />
           <Route path="/signin" element={<SignIn />} />
-          
-          {/* Admin routes */}
-          <Route path="/admin/menu" element={<AdminMenu />} />
         </Routes>
       </div>
     </CartProvider>

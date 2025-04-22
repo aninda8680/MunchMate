@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FiUser, FiEdit, FiLogOut, FiArrowLeft } from "react-icons/fi";
+import { FiEdit, FiLogOut, FiArrowLeft } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db, auth } from "../config";
@@ -76,17 +76,14 @@ const UserProfile = () => {
           transition={{ duration: 0.5 }}
           className="bg-black/80 backdrop-blur-md rounded-2xl p-6 border border-orange-500/20 shadow-lg shadow-orange-500/10"
         >
-          <div className="flex items-center space-x-4 mb-6 pb-6 border-b border-orange-500/20">
-            <div className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-full p-4 text-white">
-              <FiUser size={24} />
-            </div>
+          <div className="pb-6 border-b border-orange-500/20">
             <div>
               <h1 className="text-2xl font-bold text-white">{userData?.name || "User"}</h1>
               <p className="text-orange-400/80">{userData?.email || ""}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-orange-400 mb-4">Personal Information</h2>
               
@@ -126,17 +123,6 @@ const UserProfile = () => {
               <span>Sign Out</span>
             </motion.button>
           </div>
-        </motion.div>
-        
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="mt-6 bg-black/80 backdrop-blur-md rounded-2xl p-6 border border-orange-500/20 shadow-lg shadow-orange-500/10"
-        >
-          <h2 className="text-xl font-semibold text-orange-400 mb-4">Order History</h2>
-          <p className="text-gray-400">Your recent orders will appear here.</p>
-          {/* Order history could be implemented here */}
         </motion.div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import {
   FiShoppingCart,
   FiChevronDown,
   FiLogOut,
+  FiFileText,
 } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -194,6 +195,13 @@ const Navbar = ({ isAdmin }) => {
                     <span>View Profile</span>
                   </button>
                   <button
+                    onClick={() => navigate("/orders")}
+                    className="text-white text-sm py-1.5 px-4 rounded-md text-left hover:bg-orange-500/20 w-full flex items-center space-x-2"
+                  >
+                    <FiFileText size={14} />
+                    <span>My Orders</span>
+                  </button>
+                  <button
                     onClick={handleSignOut}
                     className="text-white text-sm py-1.5 px-4 rounded-md text-left hover:bg-orange-500/20 w-full flex items-center space-x-2"
                   >
@@ -259,6 +267,16 @@ const Navbar = ({ isAdmin }) => {
                 <FiUser />
               </span>
               <span>View Profile</span>
+            </a>
+            
+            <a
+              onClick={() => navigate("/orders")}
+              className="flex items-center space-x-3 py-2 px-3 rounded-lg text-gray-300 hover:bg-orange-500/10 hover:text-orange-400"
+            >
+              <span className="text-lg">
+                <FiFileText />
+              </span>
+              <span>My Orders</span>
             </a>
           </div>
 

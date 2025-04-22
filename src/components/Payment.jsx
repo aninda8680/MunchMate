@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useCart } from "../context/CartContext"; // Update this path as needed
+import { useCart } from "../context/CartContext";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiArrowLeft, FiCreditCard, FiCheckCircle } from "react-icons/fi";
-import Squares from "./Squares"; // Make sure this path is correct
+import Squares from "./Squares";
 
 const Payment = () => {
   const { cart } = useCart();
@@ -11,19 +11,28 @@ const Payment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [paymentId, setPaymentId] = useState(null);
-  
-  // Calculate total price
+
   const totalPrice = cart
-    .reduce((total, item) => total + item.price, 0)
+    .reduce((total, item) => total + item.price * (item.quantity || 1), 0)
     .toFixed(2);
 
-  // Generate a random order number
-  const orderNumber = `ORD-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+  const orderNumber = `ORD-${Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0")}`;
 
-  // Load Razorpay script
+  const groupedItems = cart.reduce((acc, item) => {
+    const existingItem = acc.find((i) => i.id === item.id);
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      acc.push({ ...item, quantity: 1 });
+    }
+    return acc;
+  }, []);
+
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
     document.body.appendChild(script);
 
@@ -32,50 +41,44 @@ const Payment = () => {
     };
   }, []);
 
-  // Handle payment processing
   const handlePayment = () => {
     setIsProcessing(true);
 
     try {
-      const razorpayKey = "rzp_test_placeholder"; // Replace with your actual key in production
-      
+      const razorpayKey = "rzp_test_placeholder";
+
       const options = {
         key: razorpayKey,
-        amount: parseFloat(totalPrice) * 100, // Amount in smallest currency unit (paise for INR)
+        amount: parseFloat(totalPrice) * 100,
         currency: "INR",
         name: "Your Restaurant Name",
         description: `Payment for order ${orderNumber}`,
-        image: "https://your-logo-url.com/logo.png", // Replace with your logo URL
-        handler: function(response) {
-          // Handle successful payment
+        image: "https://your-logo-url.com/logo.png",
+        handler: function (response) {
           setPaymentId(response.razorpay_payment_id);
           setIsProcessing(false);
           setIsComplete(true);
-          
-          // Store paymentId in session/local storage to access it in the invoice
-          sessionStorage.setItem('paymentId', response.razorpay_payment_id);
-          
-          // Wait 2 seconds before redirecting to invoice
+          sessionStorage.setItem("paymentId", response.razorpay_payment_id);
           setTimeout(() => {
-            navigate('/invoice');
+            navigate("/invoice");
           }, 2000);
         },
         prefill: {
           name: "Customer Name",
           email: "customer@example.com",
-          contact: "9876543210"
+          contact: "9876543210",
         },
         notes: {
-          address: "Customer Address"
+          address: "Customer Address",
         },
         theme: {
-          color: "#333333" // Dark theme color to match
+          color: "#333333",
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: function () {
             setIsProcessing(false);
-          }
-        }
+          },
+        },
       };
 
       const paymentObject = new window.Razorpay(options);
@@ -86,30 +89,23 @@ const Payment = () => {
     }
   };
 
-  // Mock payment process for demo purposes
   const handleMockPayment = () => {
     setIsProcessing(true);
-    
-    // Simulate payment processing
     setTimeout(() => {
-      const mockPaymentId = "pay_" + Math.random().toString(36).substring(2, 15);
+      const mockPaymentId =
+        "pay_" + Math.random().toString(36).substring(2, 15);
       setPaymentId(mockPaymentId);
       setIsProcessing(false);
       setIsComplete(true);
-      
-      // Store paymentId in session/local storage
-      sessionStorage.setItem('paymentId', mockPaymentId);
-      
-      // Wait 2 seconds before redirecting to invoice
+      sessionStorage.setItem("paymentId", mockPaymentId);
       setTimeout(() => {
-        navigate('/invoice');
+        navigate("/invoice");
       }, 2000);
     }, 1500);
   };
 
   return (
     <div className="relative min-h-screen w-full bg-black overflow-hidden">
-      {/* Squares background */}
       <div className="absolute inset-0 z-0">
         <Squares
           direction="none"
@@ -152,49 +148,71 @@ const Payment = () => {
           ) : (
             <>
               <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 mb-6 border border-gray-800">
-                <h3 className="text-xl font-bold text-gray-100 mb-4">Order Summary</h3>
-                
+                <h3 className="text-xl font-bold text-gray-100 mb-4">
+                  Order Summary
+                </h3>
                 <div className="space-y-4 mb-6">
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                    <span className="text-gray-400">Order Number</span>
-                    <span className="font-medium text-gray-200">{orderNumber}</span>
+                  {/* Items list with clean styling */}
+                  <div className="space-y-4 mb-6">
+                    {groupedItems.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-4 bg-gray-900 bg-opacity-40 rounded-lg border border-gray-800"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-16 h-16 rounded-lg object-cover border border-gray-700"
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-gray-200 font-medium text-lg">
+                              {item.name}
+                            </span>
+                            <span className="text-gray-400">
+                              Qty: {item.quantity}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-gray-300 font-medium">
+                            ₹{(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Items ({cart.length})</span>
-                    <span className="font-medium text-gray-200">₹{totalPrice}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Delivery Fee</span>
-                    <span className="font-medium text-gray-200">₹0.00</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Tax</span>
-                    <span className="font-medium text-gray-200">₹0.00</span>
-                  </div>
-                </div>
-                
-                <div className="border-t border-gray-800 pt-4 mt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-300">
-                      Total
-                    </span>
-                    <span className="text-lg font-bold text-white">
-                      ₹{totalPrice}
-                    </span>
+
+                  {/* Summary Details with consistent styling */}
+                  <div className="space-y-3 border-t border-gray-800 pt-4">
+                    <div className="flex justify-between items-center py-3 px-4 bg-gray-900 bg-opacity-40 rounded-lg mt-4">
+                      <span className="text-lg font-bold text-gray-200">
+                        Total
+                      </span>
+                      <span className="text-lg font-bold text-gray-200">
+                        ₹{totalPrice}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 mb-6 border border-gray-800">
-                <h3 className="text-xl font-bold text-gray-100 mb-4">Payment Method</h3>
-                
+                <h3 className="text-xl font-bold text-gray-100 mb-4">
+                  Payment Method
+                </h3>
+
                 {isComplete ? (
                   <div className="text-center py-6">
                     <div className="flex justify-center mb-4">
                       <FiCheckCircle className="text-green-500" size={60} />
                     </div>
-                    <h4 className="text-xl font-bold text-green-500 mb-2">Payment Successful!</h4>
-                    <p className="text-gray-400 mb-2">Payment ID: {paymentId}</p>
+                    <h4 className="text-xl font-bold text-green-500 mb-2">
+                      Payment Successful!
+                    </h4>
+                    <p className="text-gray-400 mb-2">
+                      Payment ID: {paymentId}
+                    </p>
                     <p className="text-gray-400">Redirecting to invoice...</p>
                   </div>
                 ) : (
@@ -206,9 +224,25 @@ const Payment = () => {
                     >
                       {isProcessing ? (
                         <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Processing...
                         </span>
@@ -219,7 +253,7 @@ const Payment = () => {
                         </span>
                       )}
                     </button>
-                    
+
                     <button
                       onClick={handleMockPayment}
                       disabled={isProcessing}
@@ -227,9 +261,25 @@ const Payment = () => {
                     >
                       {isProcessing ? (
                         <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Processing...
                         </span>

@@ -27,9 +27,9 @@ const SignUp = () => {
       newErrors.email = "Oops! We need your email to serve you";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Hmm, that doesn't look like a real email";
-    } else if (!formData.email.endsWith("adamasuniversity.ac.in")) {
+    } else if (!formData.email.endsWith("stu.adamasuniversity.ac.in")) {
       newErrors.email =
-        "Please use your Adamas University email (@adamasuniversity.ac.in)";
+        "Please use your Adamas University email (@stu.adamasuniversity.ac.in)";
     }
 
     // Password validation
