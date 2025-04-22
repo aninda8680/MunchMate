@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiTruck, FiMapPin, FiClock } from "react-icons/fi";
+import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
 import Squares from "./Squares";
 import QRCode from "react-qr-code";
 import { db, auth } from "../config"; // Import Firebase db and auth
@@ -27,8 +27,7 @@ const Invoice = () => {
   const [invoiceSaved, setInvoiceSaved] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [error, setError] = useState(null);
-  const [deliveryStatus, setDeliveryStatus] = useState("Preparing"); // Default status for takeaway
-  const [estimatedPickupTime, setEstimatedPickupTime] = useState(""); // For takeaway pickup time
+  const [deliveryStatus, setDeliveryStatus] = useState("Not Given"); // Simplified status
   
   // Group identical items together
   const groupedItems = cart.reduce((acc, item) => {
@@ -43,15 +42,6 @@ const Invoice = () => {
 
   const totalPrice = cart.reduce((total, item) => total + item.price, 0).toFixed(2);
   const currentDate = new Date().toLocaleDateString("en-GB");
-
-  // Set estimated pickup time (15 minutes from now)
-  useEffect(() => {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() + 15);
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    setEstimatedPickupTime(`${hours}:${minutes}`);
-  }, []);
 
   // Fetch user details from Firestore
   useEffect(() => {
@@ -223,7 +213,6 @@ const Invoice = () => {
         orderNumber: formattedOrderNumber,
         date: new Date(), // Store as Firestore timestamp
         formattedDate: currentDate,
-        estimatedPickupTime: estimatedPickupTime,
         customer: {
           uid: userDetails.uid || "guest",
           name: userDetails.name || "Guest User",
@@ -297,12 +286,12 @@ const Invoice = () => {
 
   const getStatusIcon = () => {
     switch(deliveryStatus.toLowerCase()) {
-      case "ready":
+      case "delivered":
         return <FiCheckCircle className="text-green-500" />;
-      case "preparing":
-        return <FiClock className="text-yellow-500" />;
+      case "not delivered":
+        return <FiAlertCircle className="text-yellow-500" />;
       default:
-        return <FiClock className="text-yellow-500" />;
+        return <FiAlertCircle className="text-yellow-500" />;
     }
   };
 
@@ -374,7 +363,7 @@ const Invoice = () => {
           
           {invoiceSaved && (
             <div className="bg-green-900 bg-opacity-40 text-green-200 rounded-lg p-2 mb-4 text-center no-print">
-              Order successfully saved! We'll have it ready for pickup soon.
+              Order successfully saved!
             </div>
           )}
 
@@ -488,24 +477,17 @@ const Invoice = () => {
                 </div>
               </div>
 
-              {/* Order Status */}
+              {/* Order Status - Simplified */}
               <div className="mt-8 pt-4 border-t border-gray-800">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center mb-4">
                     {getStatusIcon()}
-                    <span className="text-yellow-500 font-medium ml-2">Status: {deliveryStatus}</span>
-                  </div>
-                  
-                  <div className="flex items-center mb-4">
-                    <FiClock className="text-blue-400 mr-2" size={20} />
-                    <span className="text-blue-400 font-medium">Estimated Pickup Time: {estimatedPickupTime}</span>
+                    <span className={`font-medium ml-2 ${deliveryStatus.toLowerCase() === "delivered" ? "text-green-500" : "text-yellow-500"}`}>
+                      Status: {deliveryStatus}
+                    </span>
                   </div>
                   
                   <div className="mt-4 bg-gray-900 p-4 rounded-lg w-full max-w-md">
-                    <div className="flex items-center mb-2">
-                      <FiMapPin className="text-green-400 mr-2" size={20} />
-                      <span className="text-green-400 font-medium">Pickup Location:</span>
-                    </div>
                     <p className="text-gray-400 text-center">Food Court, Building #2</p>
                     <p className="text-gray-400 text-center">Show this receipt when picking up your order</p>
                   </div>
@@ -525,9 +507,7 @@ const Invoice = () => {
               <div className="mt-8 pt-4 border-t border-gray-800">
                 <h2 className="font-bold text-gray-300 mb-2">Pickup Instructions:</h2>
                 <ul className="text-gray-400 list-disc pl-5 space-y-1">
-                  <li>Please arrive at the estimated pickup time</li>
                   <li>Present this receipt or order number when collecting your order</li>
-                  <li>Your order will be kept warm for up to 15 minutes after the estimated pickup time</li>
                   <li>For any changes, please contact us immediately</li>
                 </ul>
               </div>
@@ -547,7 +527,6 @@ const Invoice = () => {
               <div className="mt-8 pt-4 border-t border-gray-800">
                 <h2 className="font-bold text-gray-300 mb-2">Terms & Conditions:</h2>
                 <ul className="text-gray-400 list-disc pl-5 space-y-1">
-                  <li>Orders not collected within 30 minutes after estimated pickup time may be disposed of</li>
                   <li>All items are non-refundable after collection</li>
                   <li>Please check your order details at the time of pickup</li>
                   <li>This receipt is automatically generated and serves as proof of purchase</li>
