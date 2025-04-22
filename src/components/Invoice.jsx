@@ -3,8 +3,6 @@ import { useCart } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  FiPrinter,
-  FiDownload,
   FiArrowLeft,
   FiCheckCircle,
   FiAlertCircle,
@@ -26,7 +24,6 @@ import {
 const Invoice = () => {
   const { cart } = useCart();
   const invoiceRef = useRef(null);
-  const [orderNumber, setOrderNumber] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -101,7 +98,7 @@ const Invoice = () => {
     fetchUserDetails();
   }, []);
 
-  // Get the latest order number and invoice number
+  // Get the latest invoice number
   useEffect(() => {
     const fetchLatestInvoiceNumber = async () => {
       try {
@@ -127,15 +124,11 @@ const Invoice = () => {
           // Continue with the default invoice number if Firestore fails
         }
 
-        // Format invoice and order numbers
+        // Format invoice number
         const formattedInvoiceNumber = `INV-${nextSerialNumber
           .toString()
           .padStart(4, "0")}`;
-        const formattedOrderNumber = `TKY-${nextSerialNumber
-          .toString()
-          .padStart(4, "0")}`;
         setInvoiceNumber(formattedInvoiceNumber);
-        setOrderNumber(formattedOrderNumber);
 
         setIsLoading(false);
 
@@ -143,8 +136,7 @@ const Invoice = () => {
         if (cart.length > 0 && userDetails) {
           saveInvoiceToFirebase(
             nextSerialNumber,
-            formattedInvoiceNumber,
-            formattedOrderNumber
+            formattedInvoiceNumber
           );
         }
       } catch (error) {
@@ -154,7 +146,6 @@ const Invoice = () => {
           .toString()
           .padStart(4, "0");
         setInvoiceNumber(`INV-${randomNumber}`);
-        setOrderNumber(`TKY-${randomNumber}`);
         setIsLoading(false);
       }
     };
@@ -210,15 +201,13 @@ const Invoice = () => {
         .toString()
         .padStart(4, "0");
       setInvoiceNumber(`INV-${randomNumber}`);
-      setOrderNumber(`TKY-${randomNumber}`);
     }
   }, [cart, userDetails, isLoading]);
 
   // Save invoice data to Firebase
   const saveInvoiceToFirebase = async (
     serialNumber,
-    formattedInvoiceNumber,
-    formattedOrderNumber
+    formattedInvoiceNumber
   ) => {
     if (invoiceSaved || cart.length === 0 || !userDetails) return;
 
@@ -238,7 +227,6 @@ const Invoice = () => {
       const invoiceData = {
         serialNumber: serialNumber,
         invoiceNumber: formattedInvoiceNumber,
-        orderNumber: formattedOrderNumber,
         date: new Date(), // Store as Firestore timestamp
         formattedDate: currentDate,
         customer: {
@@ -253,8 +241,6 @@ const Invoice = () => {
           semester: userDetails.semester || "Unknown",
         },
         items: items,
-        subtotal: parseFloat(totalPrice),
-        tax: 0,
         totalAmount: parseFloat(totalPrice),
         deliveryStatus: deliveryStatus,
         orderType: "Takeaway",
@@ -289,7 +275,6 @@ const Invoice = () => {
           `invoice_emergency_${Date.now()}`,
           JSON.stringify({
             invoiceNumber: formattedInvoiceNumber,
-            orderNumber: formattedOrderNumber,
             date: currentDate,
             customerName: userDetails?.name || "Guest",
             items: groupedItems,
@@ -303,21 +288,6 @@ const Invoice = () => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handlePrint = () => {
-    const printContent = invoiceRef.current.innerHTML;
-    const originalContent = document.body.innerHTML;
-    document.body.innerHTML = printContent;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload();
-  };
-
-  const handleDownload = () => {
-    alert(
-      "In a real app, this would generate a PDF for download. Use a library like jsPDF or html2pdf."
-    );
   };
 
   const getStatusIcon = () => {
@@ -369,20 +339,6 @@ const Invoice = () => {
             <h2 className="text-2xl md:text-3xl font-bold text-gray-100">
               Order Receipt
             </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={handlePrint}
-                className="px-4 py-2 rounded-lg border border-gray-600 text-gray-400 font-medium hover:bg-gray-900 transition-all duration-300 flex items-center"
-              >
-                <FiPrinter className="mr-2" /> Print
-              </button>
-              <button
-                onClick={handleDownload}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white font-medium hover:from-gray-700 hover:to-gray-600 transition-all duration-300 flex items-center"
-              >
-                <FiDownload className="mr-2" /> Download
-              </button>
-            </div>
           </div>
 
           {/* Error and Status Messages - hidden on print */}
@@ -427,7 +383,6 @@ const Invoice = () => {
                   <h1 className="text-2xl font-bold text-gray-100">
                     TAKEAWAY ORDER
                   </h1>
-                  <p className="text-gray-400">Order #: {orderNumber}</p>
                   <p className="text-gray-400 text-sm">
                     Invoice #: {invoiceNumber}
                   </p>
@@ -438,15 +393,8 @@ const Invoice = () => {
                 </div>
               </div>
 
-              {/* From / To */}
+              {/* Customer Information */}
               <div className="flex flex-col md:flex-row justify-between mb-8">
-                <div>
-                  <h2 className="font-bold text-gray-300 mb-2">Pickup from:</h2>
-                  <p className="text-gray-400">Your Business Name</p>
-                  <p className="text-gray-400">123 Campus Street</p>
-                  <p className="text-gray-400">Building #2, Food Court</p>
-                  <p className="text-gray-400">contact@yourfoodcourt.com</p>
-                </div>
                 <div className="mt-4 md:mt-0">
                   <h2 className="font-bold text-gray-300 mb-2">Customer:</h2>
                   {userDetails ? (
@@ -529,18 +477,10 @@ const Invoice = () => {
                 </table>
               </div>
 
-              {/* Totals */}
+              {/* Totals - Simplified */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/3">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium text-gray-300">Subtotal:</span>
-                    <span className="text-gray-300">₹{totalPrice}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium text-gray-300">Tax (0%):</span>
-                    <span className="text-gray-300">₹0.00</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-t border-gray-800 font-bold">
+                  <div className="flex justify-between py-2 font-bold">
                     <span className="text-gray-200">Total:</span>
                     <span className="text-gray-100">₹{totalPrice}</span>
                   </div>
@@ -563,18 +503,9 @@ const Invoice = () => {
                     </span>
                   </div>
 
-                  <div className="mt-4 bg-gray-900 p-4 rounded-lg w-full max-w-md">
-                    <p className="text-gray-400 text-center">
-                      Food Court, Building #2
-                    </p>
-                    <p className="text-gray-400 text-center">
-                      Show this receipt when picking up your order
-                    </p>
-                  </div>
-
                   <div className="mt-4">
                     <QRCode
-                      value={`${orderNumber}|${currentDate}`}
+                      value={`${invoiceNumber}|${currentDate}`}
                       size={128}
                       className="qr-code bg-white p-2 rounded"
                     />
@@ -585,20 +516,6 @@ const Invoice = () => {
                 </div>
               </div>
 
-              {/* Pickup Instructions */}
-              <div className="mt-8 pt-4 border-t border-gray-800">
-                <h2 className="font-bold text-gray-300 mb-2">
-                  Pickup Instructions:
-                </h2>
-                <ul className="text-gray-400 list-disc pl-5 space-y-1">
-                  <li>
-                    Present this receipt or order number when collecting your
-                    order
-                  </li>
-                  <li>For any changes, please contact us immediately</li>
-                </ul>
-              </div>
-
               {/* Contact Info */}
               <div className="mt-8 pt-4 border-t border-gray-800">
                 <h2 className="font-bold text-gray-300 mb-2">Need Help?</h2>
@@ -606,21 +523,6 @@ const Invoice = () => {
                 <p className="text-gray-400">
                   Email: support@yourfoodcourt.com
                 </p>
-              </div>
-
-              {/* T&Cs */}
-              <div className="mt-8 pt-4 border-t border-gray-800">
-                <h2 className="font-bold text-gray-300 mb-2">
-                  Terms & Conditions:
-                </h2>
-                <ul className="text-gray-400 list-disc pl-5 space-y-1">
-                  <li>All items are non-refundable after collection</li>
-                  <li>Please check your order details at the time of pickup</li>
-                  <li>
-                    This receipt is automatically generated and serves as proof
-                    of purchase
-                  </li>
-                </ul>
               </div>
             </div>
           )}

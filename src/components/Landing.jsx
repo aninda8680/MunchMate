@@ -174,8 +174,7 @@ const Landing = () => {
 
           {/* Description */}
           <p className="text-lg md:text-xl text-gray-300 mb-10 md:mb-12">
-            Discover delicious meals from local restaurants and order
-            hassle-free, right to your doorstep.
+            Your campus canteen, simplified! Order fresh meals between classes and skip the long queues.
           </p>
 
           {/* Buttons with hover effects */}
@@ -184,7 +183,7 @@ const Landing = () => {
               onClick={handleSignIn}
               className="px-8 py-3 bg-[#1A1110] text-orange-500 font-semibold rounded-full shadow-lg border-2 border-orange-500 hover:bg-orange-900 hover:text-white transition-all duration-300 w-full transform hover:scale-105 hover:shadow-xl"
             >
-              Sign In
+              Student Login
             </button>
             <button
               onClick={handleSignUp}
@@ -194,22 +193,23 @@ const Landing = () => {
             </button>
           </div>
 
-          {/* Food icons at bottom */}
-          <div className="flex justify-center mt-10 space-x-4">
-            <span className="text-2xl transform hover:scale-125 transition-transform cursor-pointer">
-              🍕
-            </span>
+
+          {/* Campus food icons */}
+          <div className="flex justify-center mt-8 space-x-4">
             <span className="text-2xl transform hover:scale-125 transition-transform cursor-pointer">
               🍔
             </span>
             <span className="text-2xl transform hover:scale-125 transition-transform cursor-pointer">
-              🍜
+              🍟
             </span>
             <span className="text-2xl transform hover:scale-125 transition-transform cursor-pointer">
-              🍣
+              🥪
             </span>
             <span className="text-2xl transform hover:scale-125 transition-transform cursor-pointer">
-              🍦
+              ☕
+            </span>
+            <span className="text-2xl transform hover:scale-125 transition-transform cursor-pointer">
+              🧁
             </span>
           </div>
         </div>

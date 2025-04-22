@@ -49,18 +49,24 @@ const SignIn = () => {
     } catch (error) {
       console.error("Login failed:", error);
       let errorMessage = "Failed to sign in. Please try again.";
-      if (
-        error.code === "auth/user-not-found" ||
-        error.code === "auth/wrong-password"
-      ) {
-        errorMessage = "Incorrect email or password. Try again!";
+      
+      // Enhanced error messages for authentication failures
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email. Please check your email or sign up.";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password. Please try again or reset your password.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email format. Please enter a valid email address.";
+      } else if (error.code === "auth/invalid-credential") {
+        errorMessage = "Invalid login credentials. Please check your email and password.";
       } else if (error.code === "auth/too-many-requests") {
-        errorMessage = "Too many failed attempts. Please try again later.";
+        errorMessage = "Too many failed login attempts. Please try again later or reset your password.";
       } else if (error.code === "auth/user-disabled") {
-        errorMessage = "This account has been disabled. Contact support.";
+        errorMessage = "This account has been disabled. Please contact campus support.";
       } else if (error.code === "auth/network-request-failed") {
         errorMessage = "Network error. Check your connection and try again.";
       }
+      
       setFirebaseError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -93,10 +99,10 @@ const SignIn = () => {
             <Utensils className="text-white" size={42} />
           </motion.div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mt-2">
-            MunchMate Sign In
+            Munchmate Login
           </h2>
           <p className="text-sm sm:text-base text-white/80">
-            Dive back into delicious adventures!
+            Sign in to order from your college canteen!
           </p>
         </div>
         <form
@@ -131,7 +137,7 @@ const SignIn = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="foodie@munchmate.com"
+              placeholder="Your University Mail"
               className={`w-full p-2 sm:p-3 rounded-lg border text-base ${
                 errors.email
                   ? "border-red-500 focus:ring-orange-500"
@@ -161,7 +167,7 @@ const SignIn = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Your Secret Recipe 🔥"
+              placeholder="Your Secret Recipe 🔑"
               className={`w-full p-2 sm:p-3 rounded-lg border text-base ${
                 errors.password
                   ? "border-red-500 focus:ring-orange-500"
@@ -214,7 +220,7 @@ const SignIn = () => {
               <>
                 <LogIn size={18} className="mr-2" />
                 <span className="hidden sm:inline">
-                  Heat Up Your Experience
+                  Sign In to Order
                 </span>
                 <span className="inline sm:hidden">Sign In</span>
               </>
