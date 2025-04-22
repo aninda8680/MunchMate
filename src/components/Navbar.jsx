@@ -30,7 +30,6 @@ const Navbar = ({ isAdmin }) => {
     { name: "Home", icon: <FiHome />, path: "/home" },
     { name: "Menu", icon: <FiBook />, path: "/menu" },
     { name: "Cart", icon: <FiShoppingCart />, path: "/cart" },
-    { name: "About", icon: <FiInfo />, path: "/about" },
   ];
 
   useEffect(() => {
