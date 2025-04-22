@@ -6,14 +6,14 @@ import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle } from
 import Squares from "./Squares";
 import QRCode from "react-qr-code";
 import { db, auth } from "../config"; // Import Firebase db and auth
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit, 
-  doc, 
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  limit,
+  doc,
   getDoc
 } from "firebase/firestore"; // Import Firestore functions
 
@@ -27,7 +27,7 @@ const Invoice = () => {
   const [invoiceSaved, setInvoiceSaved] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [error, setError] = useState(null);
-  
+
   // Group identical items together
   const groupedItems = cart.reduce((acc, item) => {
     const existingItem = acc.find((i) => i.id === item.id);
@@ -54,11 +54,11 @@ const Invoice = () => {
           setIsLoading(false);
           return;
         }
-        
+
         // Use userProfiles collection as shown in UserProfile component
         const userDocRef = doc(db, "userProfiles", user.uid);
         const userSnapshot = await getDoc(userDocRef);
-        
+
         if (userSnapshot.exists()) {
           setUserDetails(userSnapshot.data());
         } else {
@@ -68,13 +68,13 @@ const Invoice = () => {
             email: user.email || "No email provided",
             uid: user.uid
           });
-          
+
           console.log("No user profile document found");
         }
       } catch (error) {
         console.error("Error fetching user details:", error);
         setError("Failed to load user details. Using limited information.");
-        
+
         // Use auth information as fallback if Firestore fails
         const user = auth.currentUser;
         if (user) {
@@ -88,7 +88,7 @@ const Invoice = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchUserDetails();
   }, []);
 
@@ -98,13 +98,13 @@ const Invoice = () => {
       try {
         // First try to get the invoice number from Firestore
         let nextSerialNumber = 1; // Default start
-        
+
         try {
           // Query to get the last invoice ordered by invoice number (descending)
           const invoicesRef = collection(db, "invoices");
           const q = query(invoicesRef, orderBy("serialNumber", "desc"), limit(1));
           const querySnapshot = await getDocs(q);
-          
+
           if (!querySnapshot.empty) {
             const latestInvoice = querySnapshot.docs[0].data();
             nextSerialNumber = latestInvoice.serialNumber + 1;
@@ -113,19 +113,19 @@ const Invoice = () => {
           console.error("Firestore query failed:", firebaseError);
           // Continue with the default invoice number if Firestore fails
         }
-        
+
         // Format invoice number
         const formattedInvoiceNumber = `INV-${nextSerialNumber.toString().padStart(4, '0')}`;
         setInvoiceNumber(formattedInvoiceNumber);
-        
+
         // Get payment ID from session storage
         const storedPaymentId = sessionStorage.getItem("paymentId");
         if (storedPaymentId) {
           setPaymentId(storedPaymentId);
         }
-        
+
         setIsLoading(false);
-        
+
         // Save the invoice to Firebase if we have items in cart
         if (cart.length > 0 && userDetails) {
           saveInvoiceToFirebase(nextSerialNumber, formattedInvoiceNumber);
@@ -180,7 +180,7 @@ const Invoice = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     // Only fetch invoice number when user details are available
     if (userDetails) {
       fetchLatestInvoiceNumber();
@@ -194,9 +194,9 @@ const Invoice = () => {
   // Save invoice data to Firebase
   const saveInvoiceToFirebase = async (serialNumber, formattedInvoiceNumber) => {
     if (invoiceSaved || cart.length === 0 || !userDetails) return;
-    
+
     setIsSaving(true);
-    
+
     try {
       // Calculate subtotals for each item
       const items = groupedItems.map(item => ({
@@ -206,7 +206,7 @@ const Invoice = () => {
         quantity: item.quantity,
         subtotal: item.price * item.quantity
       }));
-      
+
       // Create invoice data object with user details
       const invoiceData = {
         serialNumber: serialNumber,
@@ -231,7 +231,7 @@ const Invoice = () => {
         paymentStatus: paymentId ? "Completed" : "Pending",
         createdAt: new Date()
       };
-      
+
       // Add to Firestore
       try {
         const invoicesRef = collection(db, "invoices");
@@ -248,7 +248,7 @@ const Invoice = () => {
     } catch (error) {
       console.error("Error processing invoice data:", error);
       setError("Failed to save invoice to database. A local copy has been stored.");
-      
+
       // Store in local storage as ultimate fallback
       try {
         localStorage.setItem(`invoice_emergency_${Date.now()}`, JSON.stringify({
@@ -340,13 +340,13 @@ const Invoice = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           {isSaving && (
             <div className="bg-yellow-900 bg-opacity-40 text-yellow-200 rounded-lg p-2 mb-4 text-center no-print">
               Saving invoice to database...
             </div>
           )}
-          
+
           {invoiceSaved && (
             <div className="bg-green-900 bg-opacity-40 text-green-200 rounded-lg p-2 mb-4 text-center no-print">
               Invoice successfully saved to database
@@ -454,15 +454,7 @@ const Invoice = () => {
               {/* Totals */}
               <div className="flex justify-end">
                 <div className="w-full md:w-1/3">
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium text-gray-300">Subtotal:</span>
-                    <span className="text-gray-300">₹{totalPrice}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="font-medium text-gray-300">Tax (0%):</span>
-                    <span className="text-gray-300">₹0.00</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-t border-gray-800 font-bold">
+                  <div className="flex justify-between py-2 border-t font-bold">
                     <span className="text-gray-200">Total:</span>
                     <span className="text-gray-100">₹{totalPrice}</span>
                   </div>
@@ -501,25 +493,6 @@ const Invoice = () => {
                   </div>
                 )}
               </div>
-
-              {/* Student Details Verification */}
-              {userDetails && userDetails.rollNumber && userDetails.rollNumber !== "Unknown" && (
-                <div className="mt-8 pt-4 border-t border-gray-800">
-                  <h2 className="font-bold text-gray-300 mb-2">Student Verification:</h2>
-                  <div className="flex flex-col md:flex-row justify-between items-start text-gray-400">
-                    <div className="flex flex-col">
-                      <span><strong>Name:</strong> {userDetails.name}</span>
-                      <span><strong>Roll Number:</strong> {userDetails.rollNumber}</span>
-                      {userDetails.course && <span><strong>Course:</strong> {userDetails.course}</span>}
-                    </div>
-                    <div className="flex flex-col mt-4 md:mt-0">
-                      {userDetails.department && <span><strong>Department:</strong> {userDetails.department}</span>}
-                      {userDetails.section && <span><strong>Section:</strong> {userDetails.section}</span>}
-                      {userDetails.semester && <span><strong>Semester:</strong> {userDetails.semester}</span>}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Notes */}
               <div className="mt-8 pt-4 border-t border-gray-800">

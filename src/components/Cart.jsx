@@ -182,13 +182,6 @@ const Cart = () => {
               </motion.div>
 
               <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 mb-6 border border-gray-800">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-gray-400">Subtotal</span>
-                  <span className="font-medium text-gray-200">
-                    ₹{totalPrice}
-                  </span>
-                </div>
-                <div className="border-t border-gray-800 pt-4 mt-4">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-300">
                       Total
@@ -197,7 +190,6 @@ const Cart = () => {
                       ₹{totalPrice}
                     </span>
                   </div>
-                </div>
               </div>
 
               <div className="flex flex-col md:flex-row justify-between gap-4">

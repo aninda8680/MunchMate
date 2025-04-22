@@ -12,7 +12,14 @@ const Payment = () => {
   const [isComplete, setIsComplete] = useState(false);
   const [paymentId, setPaymentId] = useState(null);
 
-  // Group identical items together for display
+  const totalPrice = cart
+    .reduce((total, item) => total + item.price * (item.quantity || 1), 0)
+    .toFixed(2);
+
+  const orderNumber = `ORD-${Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0")}`;
+
   const groupedItems = cart.reduce((acc, item) => {
     const existingItem = acc.find((i) => i.id === item.id);
     if (existingItem) {
@@ -23,17 +30,6 @@ const Payment = () => {
     return acc;
   }, []);
 
-  // Calculate total price
-  const totalPrice = cart
-    .reduce((total, item) => total + item.price, 0)
-    .toFixed(2);
-
-  // Generate order number
-  const orderNumber = `ORD-${Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0")}`;
-
-  // Load Razorpay script
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -45,67 +41,38 @@ const Payment = () => {
     };
   }, []);
 
-  // Handle payment
   const handlePayment = () => {
     setIsProcessing(true);
 
     try {
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
-
-      if (!razorpayKey) {
-        throw new Error("Razorpay key not found");
-      }
+      const razorpayKey = "rzp_test_placeholder";
 
       const options = {
         key: razorpayKey,
-        amount: Math.round(parseFloat(totalPrice) * 100),
+        amount: parseFloat(totalPrice) * 100,
         currency: "INR",
-        name: "MunchMate",
+        name: "Your Restaurant Name",
         description: `Payment for order ${orderNumber}`,
-        image: "/restaurant-store-svgrepo-com.svg",
+        image: "https://your-logo-url.com/logo.png",
         handler: function (response) {
-          if (response.razorpay_payment_id) {
-            setPaymentId(response.razorpay_payment_id);
-            setIsProcessing(false);
-            setIsComplete(true);
-
-            sessionStorage.setItem("paymentId", response.razorpay_payment_id);
-            sessionStorage.setItem("orderNumber", orderNumber);
-            sessionStorage.setItem("totalAmount", totalPrice);
-
-            setTimeout(() => {
-              navigate("/invoice");
-            }, 2000);
-          } else {
-            throw new Error("Payment failed");
-          }
+          setPaymentId(response.razorpay_payment_id);
+          setIsProcessing(false);
+          setIsComplete(true);
+          sessionStorage.setItem("paymentId", response.razorpay_payment_id);
+          setTimeout(() => {
+            navigate("/invoice");
+          }, 2000);
         },
         prefill: {
-          name: sessionStorage.getItem("userName") || "Guest User",
-          email: sessionStorage.getItem("userEmail") || "",
-          contact: "",
+          name: "Customer Name",
+          email: "customer@example.com",
+          contact: "9876543210",
         },
-        config: {
-          display: {
-            blocks: {
-              banks: {
-                name: "Payment methods",
-                instruments: [
-                  { method: "upi" },
-                  { method: "card" },
-                  { method: "netbanking" },
-                  { method: "wallet" },
-                ],
-              },
-            },
-            sequence: ["block.banks"],
-            preferences: {
-              show_default_blocks: true,
-            },
-          },
+        notes: {
+          address: "Customer Address",
         },
         theme: {
-          color: "#1d4ed8",
+          color: "#333333",
         },
         modal: {
           ondismiss: function () {
@@ -115,38 +82,26 @@ const Payment = () => {
       };
 
       const paymentObject = new window.Razorpay(options);
-      paymentObject.on("payment.failed", function (response) {
-        console.error("Payment failed:", response.error);
-        alert("Payment failed: " + response.error.description);
-        setIsProcessing(false);
-      });
       paymentObject.open();
     } catch (error) {
       console.error("Payment error:", error);
-      alert("Payment initialization failed: " + error.message);
       setIsProcessing(false);
     }
   };
 
-  const handleDemoPayment = () => {
+  const handleMockPayment = () => {
     setIsProcessing(true);
-    // Simulate payment processing
     setTimeout(() => {
-      const demoPaymentId =
-        "DEMO-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-      setPaymentId(demoPaymentId);
+      const mockPaymentId =
+        "pay_" + Math.random().toString(36).substring(2, 15);
+      setPaymentId(mockPaymentId);
       setIsProcessing(false);
       setIsComplete(true);
-
-      // Store demo payment details
-      sessionStorage.setItem("paymentId", demoPaymentId);
-      sessionStorage.setItem("orderNumber", orderNumber);
-      sessionStorage.setItem("totalAmount", totalPrice);
-
+      sessionStorage.setItem("paymentId", mockPaymentId);
       setTimeout(() => {
         navigate("/invoice");
       }, 2000);
-    }, 2000); // Simulate 2 second processing time
+    }, 1500);
   };
 
   return (
@@ -196,65 +151,53 @@ const Payment = () => {
                 <h3 className="text-xl font-bold text-gray-100 mb-4">
                   Order Summary
                 </h3>
-
                 <div className="space-y-4 mb-6">
-                  {groupedItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between items-center pb-3 border-b border-gray-800"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-12 h-12 rounded-lg object-cover border border-gray-700"
-                        />
-                        <div>
-                          <p className="text-gray-200">{item.name}</p>
-                          <div className="flex space-x-4 text-sm text-gray-400">
-                            <p>
-                              ₹{item.price.toFixed(2)} × {item.quantity}
-                            </p>
+                  {/* Items list with clean styling */}
+                  <div className="space-y-4 mb-6">
+                    {groupedItems.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-4 bg-gray-900 bg-opacity-40 rounded-lg border border-gray-800"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-16 h-16 rounded-lg object-cover border border-gray-700"
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-gray-200 font-medium text-lg">
+                              {item.name}
+                            </span>
+                            <span className="text-gray-400">
+                              Qty: {item.quantity}
+                            </span>
                           </div>
                         </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-gray-300 font-medium">
+                            ₹{(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-200">
-                          ₹{(item.price * item.quantity).toFixed(2)}
-                        </p>
-                      </div>
+                    ))}
+                  </div>
+
+                  {/* Summary Details with consistent styling */}
+                  <div className="space-y-3 border-t border-gray-800 pt-4">
+                    <div className="flex justify-between items-center py-3 px-4 bg-gray-900 bg-opacity-40 rounded-lg mt-4">
+                      <span className="text-lg font-bold text-gray-200">
+                        Total
+                      </span>
+                      <span className="text-lg font-bold text-gray-200">
+                        ₹{totalPrice}
+                      </span>
                     </div>
-                  ))}
-                </div>
-
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                    <span className="text-gray-400">Order Number</span>
-                    <span className="font-medium text-gray-200">
-                      {orderNumber}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Items ({cart.length})</span>
-                    <span className="font-medium text-gray-200">
-                      ₹{totalPrice}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border-t border-gray-800 pt-4 mt-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-300">
-                      Total Amount
-                    </span>
-                    <span className="text-lg font-bold text-white">
-                      ₹{totalPrice}
-                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 border border-gray-800">
+              <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 mb-6 border border-gray-800">
                 <h3 className="text-xl font-bold text-gray-100 mb-4">
                   Payment Method
                 </h3>
@@ -311,19 +254,10 @@ const Payment = () => {
                       )}
                     </button>
 
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-700"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-black text-gray-400">Or</span>
-                      </div>
-                    </div>
-
                     <button
-                      onClick={handleDemoPayment}
+                      onClick={handleMockPayment}
                       disabled={isProcessing}
-                      className="w-full px-6 py-4 rounded-lg border border-gray-700 text-gray-300 font-medium hover:bg-gray-900 transition-all duration-300 flex justify-center items-center"
+                      className="w-full px-6 py-4 rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white font-medium hover:from-gray-700 hover:to-gray-600 transition-all duration-300 flex justify-center items-center"
                     >
                       {isProcessing ? (
                         <span className="flex items-center">
@@ -351,8 +285,7 @@ const Payment = () => {
                         </span>
                       ) : (
                         <span className="flex items-center">
-                          <FiCreditCard className="mr-2" />
-                          Demo Payment
+                          Demo Payment (Skip)
                         </span>
                       )}
                     </button>
