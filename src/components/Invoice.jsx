@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiTruck } from "react-icons/fi";
+import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiTruck, FiMapPin, FiClock } from "react-icons/fi";
 import Squares from "./Squares";
 import QRCode from "react-qr-code";
 import { db, auth } from "../config"; // Import Firebase db and auth
@@ -20,14 +20,15 @@ import {
 const Invoice = () => {
   const { cart } = useCart();
   const invoiceRef = useRef(null);
-  const [paymentId, setPaymentId] = useState(null);
+  const [orderNumber, setOrderNumber] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [invoiceSaved, setInvoiceSaved] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [error, setError] = useState(null);
-  const [deliveryStatus, setDeliveryStatus] = useState("Not Delivered"); // Default delivery status
+  const [deliveryStatus, setDeliveryStatus] = useState("Preparing"); // Default status for takeaway
+  const [estimatedPickupTime, setEstimatedPickupTime] = useState(""); // For takeaway pickup time
   
   // Group identical items together
   const groupedItems = cart.reduce((acc, item) => {
@@ -43,7 +44,16 @@ const Invoice = () => {
   const totalPrice = cart.reduce((total, item) => total + item.price, 0).toFixed(2);
   const currentDate = new Date().toLocaleDateString("en-GB");
 
-  // Fetch user details from Firestore (using the same pattern as UserProfile)
+  // Set estimated pickup time (15 minutes from now)
+  useEffect(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 15);
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    setEstimatedPickupTime(`${hours}:${minutes}`);
+  }, []);
+
+  // Fetch user details from Firestore
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
@@ -56,7 +66,7 @@ const Invoice = () => {
           return;
         }
         
-        // Use userProfiles collection as shown in UserProfile component
+        // Use userProfiles collection
         const userDocRef = doc(db, "userProfiles", user.uid);
         const userSnapshot = await getDoc(userDocRef);
         
@@ -93,7 +103,7 @@ const Invoice = () => {
     fetchUserDetails();
   }, []);
 
-  // Get the latest invoice number and payment ID from session storage
+  // Get the latest order number and invoice number
   useEffect(() => {
     const fetchLatestInvoiceNumber = async () => {
       try {
@@ -115,27 +125,24 @@ const Invoice = () => {
           // Continue with the default invoice number if Firestore fails
         }
         
-        // Format invoice number
+        // Format invoice and order numbers
         const formattedInvoiceNumber = `INV-${nextSerialNumber.toString().padStart(4, '0')}`;
+        const formattedOrderNumber = `TKY-${nextSerialNumber.toString().padStart(4, '0')}`;
         setInvoiceNumber(formattedInvoiceNumber);
-        
-        // Get payment ID from session storage
-        const storedPaymentId = sessionStorage.getItem("paymentId");
-        if (storedPaymentId) {
-          setPaymentId(storedPaymentId);
-        }
+        setOrderNumber(formattedOrderNumber);
         
         setIsLoading(false);
         
         // Save the invoice to Firebase if we have items in cart
         if (cart.length > 0 && userDetails) {
-          saveInvoiceToFirebase(nextSerialNumber, formattedInvoiceNumber);
+          saveInvoiceToFirebase(nextSerialNumber, formattedInvoiceNumber, formattedOrderNumber);
         }
       } catch (error) {
         console.error("Error in invoice process:", error);
         // Fallback to random number if everything fails
-        const randomInvoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
-        setInvoiceNumber(randomInvoiceNumber);
+        const randomNumber = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
+        setInvoiceNumber(`INV-${randomNumber}`);
+        setOrderNumber(`TKY-${randomNumber}`);
         setIsLoading(false);
       }
     };
@@ -187,13 +194,14 @@ const Invoice = () => {
       fetchLatestInvoiceNumber();
     } else if (!isLoading) {
       // Generate a random invoice number if we don't have user details
-      const randomInvoiceNumber = `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
-      setInvoiceNumber(randomInvoiceNumber);
+      const randomNumber = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
+      setInvoiceNumber(`INV-${randomNumber}`);
+      setOrderNumber(`TKY-${randomNumber}`);
     }
   }, [cart, userDetails, isLoading]);
 
   // Save invoice data to Firebase
-  const saveInvoiceToFirebase = async (serialNumber, formattedInvoiceNumber) => {
+  const saveInvoiceToFirebase = async (serialNumber, formattedInvoiceNumber, formattedOrderNumber) => {
     if (invoiceSaved || cart.length === 0 || !userDetails) return;
     
     setIsSaving(true);
@@ -212,14 +220,17 @@ const Invoice = () => {
       const invoiceData = {
         serialNumber: serialNumber,
         invoiceNumber: formattedInvoiceNumber,
+        orderNumber: formattedOrderNumber,
         date: new Date(), // Store as Firestore timestamp
         formattedDate: currentDate,
+        estimatedPickupTime: estimatedPickupTime,
         customer: {
           uid: userDetails.uid || "guest",
           name: userDetails.name || "Guest User",
           email: userDetails.email || "Unknown",
-          rollNumber: userDetails.rollNumber || "Unknown",
           contactNumber: userDetails.contactNumber || "Unknown",
+          // Student specific fields if needed
+          rollNumber: userDetails.rollNumber || "Unknown",
           department: userDetails.department || "Unknown",
           section: userDetails.section || "Unknown",
           semester: userDetails.semester || "Unknown"
@@ -228,8 +239,8 @@ const Invoice = () => {
         subtotal: parseFloat(totalPrice),
         tax: 0,
         totalAmount: parseFloat(totalPrice),
-        paymentId: paymentId || null,
-        deliveryStatus: deliveryStatus, // Using delivery status instead of payment status
+        deliveryStatus: deliveryStatus,
+        orderType: "Takeaway",
         createdAt: new Date()
       };
       
@@ -254,6 +265,7 @@ const Invoice = () => {
       try {
         localStorage.setItem(`invoice_emergency_${Date.now()}`, JSON.stringify({
           invoiceNumber: formattedInvoiceNumber,
+          orderNumber: formattedOrderNumber,
           date: currentDate,
           customerName: userDetails?.name || "Guest",
           items: groupedItems,
@@ -283,10 +295,21 @@ const Invoice = () => {
     );
   };
 
+  const getStatusIcon = () => {
+    switch(deliveryStatus.toLowerCase()) {
+      case "ready":
+        return <FiCheckCircle className="text-green-500" />;
+      case "preparing":
+        return <FiClock className="text-yellow-500" />;
+      default:
+        return <FiClock className="text-yellow-500" />;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen w-full bg-black flex items-center justify-center">
-        <div className="text-gray-300">Loading invoice...</div>
+        <div className="text-gray-300">Loading your order receipt...</div>
       </div>
     );
   }
@@ -313,12 +336,12 @@ const Invoice = () => {
           {/* Header Buttons - hidden on print */}
           <div className="flex items-center justify-between mb-6 no-print">
             <Link
-              to="/payment"
+              to="/menu"
               className="text-gray-300 hover:text-gray-100 font-medium flex items-center"
             >
-              <FiArrowLeft className="mr-2" /> Back to Payment
+              <FiArrowLeft className="mr-2" /> Back to Menu
             </Link>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-100">Invoice</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-100">Order Receipt</h2>
             <div className="flex gap-2">
               <button
                 onClick={handlePrint}
@@ -345,20 +368,20 @@ const Invoice = () => {
           
           {isSaving && (
             <div className="bg-yellow-900 bg-opacity-40 text-yellow-200 rounded-lg p-2 mb-4 text-center no-print">
-              Saving invoice to database...
+              Processing your order...
             </div>
           )}
           
           {invoiceSaved && (
             <div className="bg-green-900 bg-opacity-40 text-green-200 rounded-lg p-2 mb-4 text-center no-print">
-              Invoice successfully saved to database
+              Order successfully saved! We'll have it ready for pickup soon.
             </div>
           )}
 
           {/* Invoice Content */}
           {cart.length === 0 ? (
             <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-8 text-center border border-gray-800">
-              <p className="text-gray-400 text-lg mb-6">No items to invoice</p>
+              <p className="text-gray-400 text-lg mb-6">Your cart is empty</p>
               <Link
                 to="/menu"
                 className="px-6 py-3 rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white font-medium hover:from-gray-700 hover:to-gray-600 transition-all duration-300"
@@ -374,8 +397,9 @@ const Invoice = () => {
               {/* Invoice Header */}
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pb-4 border-b border-gray-800">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-100">INVOICE</h1>
-                  <p className="text-gray-400">{invoiceNumber}</p>
+                  <h1 className="text-2xl font-bold text-gray-100">TAKEAWAY ORDER</h1>
+                  <p className="text-gray-400">Order #: {orderNumber}</p>
+                  <p className="text-gray-400 text-sm">Invoice #: {invoiceNumber}</p>
                 </div>
                 <div className="mt-4 md:mt-0 text-right">
                   <p className="font-bold text-gray-300">Date:</p>
@@ -386,28 +410,21 @@ const Invoice = () => {
               {/* From / To */}
               <div className="flex flex-col md:flex-row justify-between mb-8">
                 <div>
-                  <h2 className="font-bold text-gray-300 mb-2">From:</h2>
+                  <h2 className="font-bold text-gray-300 mb-2">Pickup from:</h2>
                   <p className="text-gray-400">Your Business Name</p>
-                  <p className="text-gray-400">123 Business Street</p>
-                  <p className="text-gray-400">City, State, ZIP</p>
-                  <p className="text-gray-400">contact@yourbusiness.com</p>
+                  <p className="text-gray-400">123 Campus Street</p>
+                  <p className="text-gray-400">Building #2, Food Court</p>
+                  <p className="text-gray-400">contact@yourfoodcourt.com</p>
                 </div>
                 <div className="mt-4 md:mt-0">
-                  <h2 className="font-bold text-gray-300 mb-2">To:</h2>
+                  <h2 className="font-bold text-gray-300 mb-2">Customer:</h2>
                   {userDetails ? (
                     <>
                       <p className="text-gray-400">{userDetails.name}</p>
-                      <p className="text-gray-400">Roll No: {userDetails.rollNumber}</p>
+                      {userDetails.contactNumber && <p className="text-gray-400">Phone: {userDetails.contactNumber}</p>}
+                      {userDetails.email && <p className="text-gray-400">{userDetails.email}</p>}
+                      {userDetails.rollNumber && <p className="text-gray-400">Roll No: {userDetails.rollNumber}</p>}
                       {userDetails.department && <p className="text-gray-400">{userDetails.department}</p>}
-                      {(userDetails.section || userDetails.semester) && (
-                        <p className="text-gray-400">
-                          {userDetails.section && `Section: ${userDetails.section}`}
-                          {userDetails.section && userDetails.semester && ', '}
-                          {userDetails.semester && userDetails.semester}
-                        </p>
-                      )}
-                      <p className="text-gray-400">{userDetails.email}</p>
-                      {userDetails.contactNumber && <p className="text-gray-400">Contact: {userDetails.contactNumber}</p>}
                     </>
                   ) : (
                     <>
@@ -471,56 +488,58 @@ const Invoice = () => {
                 </div>
               </div>
 
-              {/* Delivery Status */}
+              {/* Order Status */}
               <div className="mt-8 pt-4 border-t border-gray-800">
-                <div className="flex flex-col items-center mb-4">
+                <div className="flex flex-col items-center">
                   <div className="flex items-center mb-4">
-                    <FiTruck className="text-yellow-500 mr-2" size={24} />
-                    <span className="text-yellow-500 font-medium">Order Status: {deliveryStatus}</span>
+                    {getStatusIcon()}
+                    <span className="text-yellow-500 font-medium ml-2">Status: {deliveryStatus}</span>
                   </div>
-                  {paymentId && (
-                    <p className="text-gray-400">Payment ID: {paymentId}</p>
-                  )}
-                  {paymentId && (
-                    <div className="mt-4 p-4 bg-white rounded">
-                      <QRCode value={paymentId} size={128} className="qr-code" />
+                  
+                  <div className="flex items-center mb-4">
+                    <FiClock className="text-blue-400 mr-2" size={20} />
+                    <span className="text-blue-400 font-medium">Estimated Pickup Time: {estimatedPickupTime}</span>
+                  </div>
+                  
+                  <div className="mt-4 bg-gray-900 p-4 rounded-lg w-full max-w-md">
+                    <div className="flex items-center mb-2">
+                      <FiMapPin className="text-green-400 mr-2" size={20} />
+                      <span className="text-green-400 font-medium">Pickup Location:</span>
                     </div>
-                  )}
-                  <div className="mt-4 p-4 border border-gray-700 rounded-lg bg-gray-900">
-                    <p className="text-gray-400 text-center text-sm">
-                      This invoice serves as proof of order. Please keep it for your records.
-                    </p>
+                    <p className="text-gray-400 text-center">Food Court, Building #2</p>
+                    <p className="text-gray-400 text-center">Show this receipt when picking up your order</p>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <QRCode 
+                      value={`${orderNumber}|${currentDate}`} 
+                      size={128} 
+                      className="qr-code bg-white p-2 rounded"
+                    />
+                    <p className="text-gray-400 text-center mt-2 text-sm">Scan to verify order</p>
                   </div>
                 </div>
               </div>
 
-              {/* Student Details Verification */}
-              {userDetails && userDetails.rollNumber && userDetails.rollNumber !== "Unknown" && (
-                <div className="mt-8 pt-4 border-t border-gray-800">
-                  <h2 className="font-bold text-gray-300 mb-2">Student Verification:</h2>
-                  <div className="flex flex-col md:flex-row justify-between items-start text-gray-400">
-                    <div className="flex flex-col">
-                      <span><strong>Name:</strong> {userDetails.name}</span>
-                      <span><strong>Roll Number:</strong> {userDetails.rollNumber}</span>
-                      {userDetails.course && <span><strong>Course:</strong> {userDetails.course}</span>}
-                    </div>
-                    <div className="flex flex-col mt-4 md:mt-0">
-                      {userDetails.department && <span><strong>Department:</strong> {userDetails.department}</span>}
-                      {userDetails.section && <span><strong>Section:</strong> {userDetails.section}</span>}
-                      {userDetails.semester && <span><strong>Semester:</strong> {userDetails.semester}</span>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Delivery Instructions */}
+              {/* Pickup Instructions */}
               <div className="mt-8 pt-4 border-t border-gray-800">
-                <h2 className="font-bold text-gray-300 mb-2">Delivery Instructions:</h2>
+                <h2 className="font-bold text-gray-300 mb-2">Pickup Instructions:</h2>
+                <ul className="text-gray-400 list-disc pl-5 space-y-1">
+                  <li>Please arrive at the estimated pickup time</li>
+                  <li>Present this receipt or order number when collecting your order</li>
+                  <li>Your order will be kept warm for up to 15 minutes after the estimated pickup time</li>
+                  <li>For any changes, please contact us immediately</li>
+                </ul>
+              </div>
+
+              {/* Contact Info */}
+              <div className="mt-8 pt-4 border-t border-gray-800">
+                <h2 className="font-bold text-gray-300 mb-2">Need Help?</h2>
                 <p className="text-gray-400">
-                  Your order will be delivered to your specified location.
+                  Call us: +91 1234567890
                 </p>
-                <p className="text-gray-400 mt-2">
-                  For any questions about your delivery, please contact our support team.
+                <p className="text-gray-400">
+                  Email: support@yourfoodcourt.com
                 </p>
               </div>
 
@@ -528,10 +547,10 @@ const Invoice = () => {
               <div className="mt-8 pt-4 border-t border-gray-800">
                 <h2 className="font-bold text-gray-300 mb-2">Terms & Conditions:</h2>
                 <ul className="text-gray-400 list-disc pl-5 space-y-1">
-                  <li>Payment is due upon receipt.</li>
-                  <li>This invoice is automatically generated.</li>
-                  <li>All items are non-refundable after consumption.</li>
-                  <li>Please check your order details before confirming delivery.</li>
+                  <li>Orders not collected within 30 minutes after estimated pickup time may be disposed of</li>
+                  <li>All items are non-refundable after collection</li>
+                  <li>Please check your order details at the time of pickup</li>
+                  <li>This receipt is automatically generated and serves as proof of purchase</li>
                 </ul>
               </div>
             </div>
