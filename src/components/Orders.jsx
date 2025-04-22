@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import { db, auth } from "../config";
 import { useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiDownload, FiClock, FiCheck, FiX, FiTruck } from "react-icons/fi";
+import { FiArrowLeft, FiClock, FiCheck, FiX, FiTruck } from "react-icons/fi";
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
@@ -70,142 +70,11 @@ const Orders = () => {
     }
   };
 
-  const handlePrint = () => {
-    if (!selectedOrder) return;
-    
-    // Create a printable view
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups for printing receipts");
-      return;
-    }
-    
-    // Print HTML content
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Order Invoice - ${selectedOrder.invoiceNumber}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .invoice-title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
-            .invoice-number { font-size: 16px; color: #666; }
-            .section { margin-bottom: 20px; }
-            .section-title { font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-            .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            .items-table th, .items-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            .items-table th { background-color: #f2f2f2; }
-            .total-row { font-weight: bold; }
-            .status { padding: 5px 10px; border-radius: 15px; display: inline-block; }
-            .status-Delivered { background-color: #d1fae5; color: #065f46; }
-            .status-Pending { background-color: #fef3c7; color: #92400e; }
-            .status-Preparing { background-color: #dbeafe; color: #1e40af; }
-            .status-Cancelled { background-color: #fee2e2; color: #b91c1c; }
-            .footer { margin-top: 40px; text-align: center; font-size: 14px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="invoice-title">MunchMate Invoice</div>
-            <div class="invoice-number">${selectedOrder.invoiceNumber}</div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Customer Information</div>
-            <div class="row">
-              <span>Name:</span>
-              <span>${selectedOrder.customer?.name || 'N/A'}</span>
-            </div>
-            <div class="row">
-              <span>Email:</span>
-              <span>${selectedOrder.customer?.email || 'N/A'}</span>
-            </div>
-            <div class="row">
-              <span>Contact:</span>
-              <span>${selectedOrder.customer?.contactNumber || 'N/A'}</span>
-            </div>
-            ${selectedOrder.customer?.department ? `
-            <div class="row">
-              <span>Department:</span>
-              <span>${selectedOrder.customer.department}</span>
-            </div>` : ''}
-            ${selectedOrder.customer?.rollNumber ? `
-            <div class="row">
-              <span>Roll Number:</span>
-              <span>${selectedOrder.customer.rollNumber}</span>
-            </div>` : ''}
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Order Information</div>
-            <div class="row">
-              <span>Order Date:</span>
-              <span>${formatDate(selectedOrder.createdAt)}</span>
-            </div>
-            <div class="row">
-              <span>Status:</span>
-              <span class="status status-${selectedOrder.orderStatus}">${selectedOrder.orderStatus}</span>
-            </div>
-            ${selectedOrder.deliveredAt ? `
-            <div class="row">
-              <span>Delivered At:</span>
-              <span>${formatDate(selectedOrder.deliveredAt)}</span>
-            </div>` : ''}
-          </div>
-          
-          <div class="section">
-            <div class="section-title">Order Items</div>
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Price</th>
-                  <th>Quantity</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${selectedOrder.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td>₹${item.price.toFixed(2)}</td>
-                  <td>${item.quantity}</td>
-                  <td>₹${item.subtotal.toFixed(2)}</td>
-                </tr>
-                `).join('')}
-                <tr class="total-row">
-                  <td colspan="3">Subtotal</td>
-                  <td>₹${selectedOrder.subtotal.toFixed(2)}</td>
-                </tr>
-                <tr class="total-row">
-                  <td colspan="3">Tax</td>
-                  <td>₹${selectedOrder.tax.toFixed(2)}</td>
-                </tr>
-                <tr class="total-row">
-                  <td colspan="3">Total Amount</td>
-                  <td>₹${selectedOrder.totalAmount.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          
-          <div class="footer">
-            <p>Thank you for ordering with MunchMate!</p>
-            <p>For any queries, please contact us at support@munchmate.com</p>
-          </div>
-          
-          <script>
-            window.onload = function() {
-              window.print();
-              // window.close(); // Uncomment if you want the window to close after printing
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
+  // Generate QR code for the invoice number
+  const generateQRCode = (invoiceNumber) => {
+    // Return an SVG QR code for the invoice number
+    // Using a simple placeholder for now - in a real app, you'd use a QR code library
+    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceNumber)}`;
   };
 
   const containerVariants = {
@@ -288,7 +157,7 @@ const Orders = () => {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="font-semibold text-orange-400">
-                          {order.invoiceNumber}
+                          {order.invoiceNumber || `Order #${order.id.slice(0, 8)}`}
                         </h3>
                         <p className="text-sm text-gray-400">
                           {formatDate(order.createdAt)}
@@ -312,7 +181,7 @@ const Orders = () => {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1 mb-3">
-                      {order.items.map((item, idx) => (
+                      {order.items && order.items.map((item, idx) => (
                         <span
                           key={idx}
                           className="text-xs bg-gray-800/70 px-2 py-1 rounded-md"
@@ -323,17 +192,19 @@ const Orders = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-sm">
-                        {order.items.reduce((total, item) => total + item.quantity, 0)}{" "}
-                        item{order.items.reduce((total, item) => total + item.quantity, 0) !== 1 ? "s" : ""}
+                        {order.items && order.items.reduce((total, item) => total + item.quantity, 0)}{" "}
+                        item{order.items && order.items.reduce((total, item) => total + item.quantity, 0) !== 1 ? "s" : ""}
                       </p>
-                      <p className="font-semibold">₹{order.totalAmount.toFixed(2)}</p>
+                      <p className="font-semibold">
+                        {order.totalAmount !== undefined ? `₹${order.totalAmount.toFixed(2)}` : "Price not available"}
+                      </p>
                     </div>
                   </motion.div>
                 ))}
               </>
             )}
 
-            {/* Order Details */}
+            {/* Order Details - Simplified */}
             {selectedOrder && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -348,18 +219,11 @@ const Orders = () => {
                     <FiArrowLeft className="mr-2" />
                     <span>Back to Orders</span>
                   </button>
-                  <button
-                    onClick={handlePrint}
-                    className="flex items-center bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full transition-colors"
-                  >
-                    <FiDownload className="mr-2" />
-                    <span>Download Invoice</span>
-                  </button>
                 </div>
 
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-yellow-400 bg-clip-text text-transparent mb-1">
-                    {selectedOrder.invoiceNumber}
+                    {selectedOrder.invoiceNumber || `Order #${selectedOrder.id.slice(0, 8)}`}
                   </h2>
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400">Order Status:</span>
@@ -380,53 +244,38 @@ const Orders = () => {
                   </div>
                 </div>
 
+                {/* QR Code and Order Date */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="bg-gray-900/50 rounded-lg p-4 flex flex-col items-center justify-center">
+                    <h3 className="text-lg font-semibold mb-3 text-orange-400">
+                      Invoice QR Code
+                    </h3>
+                    <img 
+                      src={generateQRCode(selectedOrder.invoiceNumber || selectedOrder.id)} 
+                      alt="Invoice QR Code" 
+                      className="w-32 h-32 mb-2"
+                    />
+                    <p className="text-sm text-gray-400">Scan to verify invoice</p>
+                  </div>
+
                   <div className="bg-gray-900/50 rounded-lg p-4">
                     <h3 className="text-lg font-semibold mb-3 text-orange-400">
                       Order Information
                     </h3>
                     <div className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Date:</span>
+                        <span className="text-gray-400">Order Date:</span>
                         <span>{formatDate(selectedOrder.createdAt)}</span>
                       </div>
-                      {selectedOrder.deliveredAt && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Delivered:</span>
-                          <span>{formatDate(selectedOrder.deliveredAt)}</span>
-                        </div>
-                      )}
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Payment:</span>
-                        <span>
-                          {selectedOrder.paymentId ? "Online" : "Cash on Delivery"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-900/50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-3 text-orange-400">
-                      Customer Details
-                    </h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Name:</span>
-                        <span>{selectedOrder.customer?.name || "N/A"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Email:</span>
-                        <span className="truncate max-w-xs">{selectedOrder.customer?.email || "N/A"}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Contact:</span>
-                        <span>{selectedOrder.customer?.contactNumber || "N/A"}</span>
+                        <span className="text-gray-400">Invoice Number:</span>
+                        <span>{selectedOrder.invoiceNumber || `#${selectedOrder.id.slice(0, 8)}`}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Order Items */}
+                {/* Order Items - Fixed version */}
                 <div className="bg-gray-900/50 rounded-lg p-4 mb-6">
                   <h3 className="text-lg font-semibold mb-4 text-orange-400">
                     Order Items
@@ -442,89 +291,35 @@ const Orders = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedOrder.items.map((item, idx) => (
+                        {selectedOrder.items && selectedOrder.items.map((item, idx) => (
                           <tr 
                             key={idx} 
                             className="border-b border-gray-800 hover:bg-gray-800/30 transition-colors"
                           >
                             <td className="py-3">{item.name}</td>
-                            <td className="text-right">₹{item.price.toFixed(2)}</td>
+                            <td className="text-right">₹{item.price !== undefined ? item.price.toFixed(2) : "N/A"}</td>
                             <td className="text-right">{item.quantity}</td>
-                            <td className="text-right">₹{item.subtotal.toFixed(2)}</td>
+                            <td className="text-right">
+                              {item.subtotal !== undefined ? `₹${item.subtotal.toFixed(2)}` : 
+                               (item.price !== undefined && item.quantity) ? `₹${(item.price * item.quantity).toFixed(2)}` : "N/A"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
-                        <tr className="text-orange-400">
-                          <td colSpan={3} className="text-right py-3 font-semibold">
-                            Subtotal:
-                          </td>
-                          <td className="text-right font-semibold">
-                            ₹{selectedOrder.subtotal.toFixed(2)}
-                          </td>
-                        </tr>
-                        <tr className="text-orange-400">
-                          <td colSpan={3} className="text-right py-1 font-semibold">
-                            Tax:
-                          </td>
-                          <td className="text-right font-semibold">
-                            ₹{selectedOrder.tax.toFixed(2)}
-                          </td>
-                        </tr>
                         <tr className="text-white">
                           <td colSpan={3} className="text-right pt-3 text-lg font-bold">
                             Total:
                           </td>
                           <td className="text-right text-lg font-bold">
-                            ₹{selectedOrder.totalAmount.toFixed(2)}
+                            {selectedOrder.totalAmount !== undefined ? 
+                              `₹${selectedOrder.totalAmount.toFixed(2)}` : 
+                              "N/A"}
                           </td>
                         </tr>
                       </tfoot>
                     </table>
                   </div>
-                </div>
-
-                {/* Academic info if available */}
-                {selectedOrder.customer?.department && (
-                  <div className="bg-gray-900/50 rounded-lg p-4 mb-6">
-                    <h3 className="text-lg font-semibold mb-3 text-orange-400">
-                      Academic Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Department:</span>
-                        <span>{selectedOrder.customer.department}</span>
-                      </div>
-                      {selectedOrder.customer.semester && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Semester:</span>
-                          <span>{selectedOrder.customer.semester}</span>
-                        </div>
-                      )}
-                      {selectedOrder.customer.section && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Section:</span>
-                          <span>{selectedOrder.customer.section}</span>
-                        </div>
-                      )}
-                      {selectedOrder.customer.rollNumber && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Roll Number:</span>
-                          <span>{selectedOrder.customer.rollNumber}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={handlePrint}
-                    className="flex items-center bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full transition-colors"
-                  >
-                    <FiDownload className="mr-2" />
-                    <span>Download Invoice</span>
-                  </button>
                 </div>
               </motion.div>
             )}

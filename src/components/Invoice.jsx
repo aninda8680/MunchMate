@@ -516,14 +516,7 @@ const Invoice = () => {
                 </div>
               </div>
 
-              {/* Contact Info */}
-              <div className="mt-8 pt-4 border-t border-gray-800">
-                <h2 className="font-bold text-gray-300 mb-2">Need Help?</h2>
-                <p className="text-gray-400">Call us: +91 1234567890</p>
-                <p className="text-gray-400">
-                  Email: support@yourfoodcourt.com
-                </p>
-              </div>
+              
             </div>
           )}
         </div>
