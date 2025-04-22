@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
+import { FiPrinter, FiDownload, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiTruck } from "react-icons/fi";
 import Squares from "./Squares";
 import QRCode from "react-qr-code";
 import { db, auth } from "../config"; // Import Firebase db and auth
@@ -27,6 +27,7 @@ const Invoice = () => {
   const [invoiceSaved, setInvoiceSaved] = useState(false);
   const [userDetails, setUserDetails] = useState(null);
   const [error, setError] = useState(null);
+  const [deliveryStatus, setDeliveryStatus] = useState("Not Delivered"); // Default delivery status
   
   // Group identical items together
   const groupedItems = cart.reduce((acc, item) => {
@@ -228,7 +229,7 @@ const Invoice = () => {
         tax: 0,
         totalAmount: parseFloat(totalPrice),
         paymentId: paymentId || null,
-        paymentStatus: paymentId ? "Completed" : "Pending",
+        deliveryStatus: deliveryStatus, // Using delivery status instead of payment status
         createdAt: new Date()
       };
       
@@ -256,7 +257,8 @@ const Invoice = () => {
           date: currentDate,
           customerName: userDetails?.name || "Guest",
           items: groupedItems,
-          total: totalPrice
+          total: totalPrice,
+          deliveryStatus: deliveryStatus
         }));
       } catch (localStorageError) {
         console.error("Even local storage failed:", localStorageError);
@@ -469,37 +471,27 @@ const Invoice = () => {
                 </div>
               </div>
 
-              {/* Payment Info */}
+              {/* Delivery Status */}
               <div className="mt-8 pt-4 border-t border-gray-800">
-                {paymentId ? (
-                  <div className="flex flex-col items-center mb-4">
-                    <div className="flex items-center mb-4">
-                      <FiCheckCircle className="text-green-500 mr-2" size={24} />
-                      <span className="text-green-500 font-medium">Payment Complete</span>
-                    </div>
+                <div className="flex flex-col items-center mb-4">
+                  <div className="flex items-center mb-4">
+                    <FiTruck className="text-yellow-500 mr-2" size={24} />
+                    <span className="text-yellow-500 font-medium">Order Status: {deliveryStatus}</span>
+                  </div>
+                  {paymentId && (
                     <p className="text-gray-400">Payment ID: {paymentId}</p>
-                    {paymentId && (
-                      <div className="mt-4 p-4 bg-white rounded">
-                        <QRCode value={paymentId} size={128} className="qr-code" />
-                      </div>
-                    )}
-                    <div className="mt-4 p-4 border border-gray-700 rounded-lg bg-gray-900">
-                      <p className="text-gray-400 text-center text-sm">
-                        This invoice serves as proof of payment. Please keep it for your records.
-                      </p>
+                  )}
+                  {paymentId && (
+                    <div className="mt-4 p-4 bg-white rounded">
+                      <QRCode value={paymentId} size={128} className="qr-code" />
                     </div>
+                  )}
+                  <div className="mt-4 p-4 border border-gray-700 rounded-lg bg-gray-900">
+                    <p className="text-gray-400 text-center text-sm">
+                      This invoice serves as proof of order. Please keep it for your records.
+                    </p>
                   </div>
-                ) : (
-                  <div className="flex flex-col items-center mb-4">
-                    <p className="text-yellow-500 font-medium mb-4">Payment Pending</p>
-                    <Link
-                      to="/payment"
-                      className="px-6 py-3 rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white font-medium hover:from-gray-700 hover:to-gray-600 transition-all duration-300 flex items-center"
-                    >
-                      Go to Payment
-                    </Link>
-                  </div>
-                )}
+                </div>
               </div>
 
               {/* Student Details Verification */}
@@ -521,14 +513,14 @@ const Invoice = () => {
                 </div>
               )}
 
-              {/* Notes */}
+              {/* Delivery Instructions */}
               <div className="mt-8 pt-4 border-t border-gray-800">
-                <h2 className="font-bold text-gray-300 mb-2">Notes:</h2>
+                <h2 className="font-bold text-gray-300 mb-2">Delivery Instructions:</h2>
                 <p className="text-gray-400">
-                  Thank you for your business! We appreciate your patronage.
+                  Your order will be delivered to your specified location.
                 </p>
                 <p className="text-gray-400 mt-2">
-                  For any questions about this invoice, please contact our support team.
+                  For any questions about your delivery, please contact our support team.
                 </p>
               </div>
 
@@ -539,6 +531,7 @@ const Invoice = () => {
                   <li>Payment is due upon receipt.</li>
                   <li>This invoice is automatically generated.</li>
                   <li>All items are non-refundable after consumption.</li>
+                  <li>Please check your order details before confirming delivery.</li>
                 </ul>
               </div>
             </div>
