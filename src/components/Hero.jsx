@@ -286,7 +286,7 @@ const Hero = () => {
                   letterSpacing: "0.01em",
                 }}
               >
-                Enjoy a premium ordering experience with secure payments and
+                Enjoy your order experience with secure payments and
                 convenient pickup. Your meal will be ready to collect with your
                 unique token number.
               </motion.p>
