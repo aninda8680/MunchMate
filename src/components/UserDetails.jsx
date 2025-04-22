@@ -46,25 +46,114 @@ const UserDetails = () => {
     "Department of Computer Science and Engineering": [
       "Bachelor of Technology (B.Tech) in Computer Science and Engineering",
       "Master of Technology (M.Tech) in Computer Science and Engineering",
+      "Master of Technology (M.Tech) in Computer Science and Engineering"
     ],
     "Department of Electrical and Electronics Engineering": [
       "Bachelor of Technology (B.Tech) in Electrical and Electronics Engineering",
       "Master of Technology (M.Tech) in Electrical and Electronics Engineering",
+      "Master of Technology (M.Tech) in Electrical and Electronics Engineering"
     ],
     "Department of Civil Engineering": [
       "Bachelor of Technology (B.Tech) in Civil Engineering",
       "Master of Technology (M.Tech) in Structural Engineering",
+      "Master of Technology (M.Tech) in Structural Engineering"
     ],
     "Department of Mechanical Engineering": [
       "Bachelor of Technology (B.Tech) in Mechanical Engineering",
       "Master of Technology (M.Tech) in Mechanical Engineering",
+      "Master of Technology (M.Tech) in Mechanical Engineering"
     ],
     "Department of Physics": [
       "Bachelor of Science (B.Sc) in Physics",
       "Master of Science (M.Sc) in Physics",
+      "Master of Science (M.Sc) in Physics"
     ],
+    "Department of Chemistry": [
+      "Bachelor of Science (B.Sc) in Chemistry",
+      "Master of Science (M.Sc) in Chemistry"
+    ],
+    "Department of Mathematics": [
+      "Bachelor of Science (B.Sc) in Mathematics",
+      "Master of Science (M.Sc) in Mathematics"
+    ],
+    "Department of Forensic Science": [
+      "Bachelor of Science (B.Sc) in Forensic Science",
+      "Master of Science (M.Sc) in Forensic Science"
+    ],
+    "Department of Biological Sciences": [
+      "Bachelor of Science (B.Sc) in Biological Sciences",
+      "Master of Science (M.Sc) in Biological Sciences"
+    ],
+    "Department of Biotechnology": [
+      "Bachelor of Science (B.Sc) in Biotechnology",
+      "Master of Science (M.Sc) in Biotechnology"
+    ],
+    "Department of English Language and Literature": [
+      "Bachelor of Arts (B.A) in English Language and Literature",
+      "Master of Arts (M.A) in English Language and Literature"
+    ],
+    "Department of Bengali Language and Literature": [
+      "Bachelor of Arts (B.A) in Bengali Language and Literature",
+      "Master of Arts (M.A) in Bengali Language and Literature"
+    ],
+    "Department of History": [
+      "Bachelor of Arts (B.A) in History",
+      "Master of Arts (M.A) in History"
+    ],
+    "Department of Political Science": [
+      "Bachelor of Arts (B.A) in Political Science",
+      "Master of Arts (M.A) in Political Science"
+    ],
+    "Department of Sociology": [
+      "Bachelor of Arts (B.A) in Sociology",
+      "Master of Arts (M.A) in Sociology"
+    ],
+    "Department of Geography": [
+      "Bachelor of Arts (B.A) in Geography",
+      "Master of Arts (M.A) in Geography"
+    ],
+    "Department of Management": [
+      "Bachelor of Business Administration (BBA)",
+      "Master of Business Administration (MBA)"
+    ],
+    "Department of Commerce and Economics": [
+      "Bachelor of Commerce (B.Com)",
+      "Master of Commerce (M.Com)"
+    ],
+    "Department of Law": [
+      "Bachelor of Arts and Bachelor of Laws (BA LL.B. Hons.)",
+      "Bachelor of Business Administration and Bachelor of Laws (BBA LL.B. Hons.)",
+      "Master of Laws (LL.M.)",
+      "Doctor of Philosophy (Ph.D.) in Law"
+    ],
+    "Department of Education": [
+      "Bachelor of Education (B.Ed)",
+      "Master of Education (M.Ed)",
+      "Doctor of Philosophy (Ph.D.) in Education"
+    ],
+    "Department of Journalism and Mass Communication": [
+      "Bachelor of Arts (B.A) in Journalism and Mass Communication",
+      "Master of Arts (M.A) in Journalism and Mass Communication"
+    ],
+    "Department of Films and Animation": [
+      "Bachelor of Fine Arts (BFA) in Films and Animation",
+      "Master of Fine Arts (MFA) in Films and Animation"
+    ],
+    "Department of Allied Health Sciences": [
+      "Bachelor of Science (B.Sc) in Allied Health Sciences",
+      "Master of Science (M.Sc) in Allied Health Sciences"
+    ],
+    "Department of Pharmaceutical Technology": [
+      "Bachelor of Pharmacy (B.Pharm)",
+      "Diploma in Pharmacy (D.Pharm)"
+    ],
+    "Department of Smart Agriculture": [
+      "Bachelor of Science (B.Sc) in Smart Agriculture",
+      "Master of Science (M.Sc) in Smart Agriculture"
+    ]
     // Additional departments removed for brevity
   };
+  
 
   // Get all department names for the dropdown
   const departments = Object.keys(departmentsWithCourses);
