@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { useCart } from "../context/CartContext"; // Update this path as needed
+import { useCart } from "../context/CartContext";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiArrowLeft, FiCreditCard, FiCheckCircle } from "react-icons/fi";
-import Squares from "./Squares"; // Make sure this path is correct
+import Squares from "./Squares";
 
 const Payment = () => {
   const { cart } = useCart();
@@ -11,19 +11,32 @@ const Payment = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [paymentId, setPaymentId] = useState(null);
-  
+
+  // Group identical items together for display
+  const groupedItems = cart.reduce((acc, item) => {
+    const existingItem = acc.find((i) => i.id === item.id);
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      acc.push({ ...item, quantity: 1 });
+    }
+    return acc;
+  }, []);
+
   // Calculate total price
   const totalPrice = cart
     .reduce((total, item) => total + item.price, 0)
     .toFixed(2);
 
-  // Generate a random order number
-  const orderNumber = `ORD-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+  // Generate order number
+  const orderNumber = `ORD-${Math.floor(Math.random() * 10000)
+    .toString()
+    .padStart(4, "0")}`;
 
   // Load Razorpay script
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
     document.body.appendChild(script);
 
@@ -32,84 +45,112 @@ const Payment = () => {
     };
   }, []);
 
-  // Handle payment processing
+  // Handle payment
   const handlePayment = () => {
     setIsProcessing(true);
 
     try {
-      const razorpayKey = "rzp_test_placeholder"; // Replace with your actual key in production
-      
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+      if (!razorpayKey) {
+        throw new Error("Razorpay key not found");
+      }
+
       const options = {
         key: razorpayKey,
-        amount: parseFloat(totalPrice) * 100, // Amount in smallest currency unit (paise for INR)
+        amount: Math.round(parseFloat(totalPrice) * 100),
         currency: "INR",
-        name: "Your Restaurant Name",
+        name: "MunchMate",
         description: `Payment for order ${orderNumber}`,
-        image: "https://your-logo-url.com/logo.png", // Replace with your logo URL
-        handler: function(response) {
-          // Handle successful payment
-          setPaymentId(response.razorpay_payment_id);
-          setIsProcessing(false);
-          setIsComplete(true);
-          
-          // Store paymentId in session/local storage to access it in the invoice
-          sessionStorage.setItem('paymentId', response.razorpay_payment_id);
-          
-          // Wait 2 seconds before redirecting to invoice
-          setTimeout(() => {
-            navigate('/invoice');
-          }, 2000);
+        image: "/restaurant-store-svgrepo-com.svg",
+        handler: function (response) {
+          if (response.razorpay_payment_id) {
+            setPaymentId(response.razorpay_payment_id);
+            setIsProcessing(false);
+            setIsComplete(true);
+
+            sessionStorage.setItem("paymentId", response.razorpay_payment_id);
+            sessionStorage.setItem("orderNumber", orderNumber);
+            sessionStorage.setItem("totalAmount", totalPrice);
+
+            setTimeout(() => {
+              navigate("/invoice");
+            }, 2000);
+          } else {
+            throw new Error("Payment failed");
+          }
         },
         prefill: {
-          name: "Customer Name",
-          email: "customer@example.com",
-          contact: "9876543210"
+          name: sessionStorage.getItem("userName") || "Guest User",
+          email: sessionStorage.getItem("userEmail") || "",
+          contact: "",
         },
-        notes: {
-          address: "Customer Address"
+        config: {
+          display: {
+            blocks: {
+              banks: {
+                name: "Payment methods",
+                instruments: [
+                  { method: "upi" },
+                  { method: "card" },
+                  { method: "netbanking" },
+                  { method: "wallet" },
+                ],
+              },
+            },
+            sequence: ["block.banks"],
+            preferences: {
+              show_default_blocks: true,
+            },
+          },
         },
         theme: {
-          color: "#333333" // Dark theme color to match
+          color: "#1d4ed8",
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: function () {
             setIsProcessing(false);
-          }
-        }
+          },
+        },
       };
 
       const paymentObject = new window.Razorpay(options);
+      paymentObject.on("payment.failed", function (response) {
+        console.error("Payment failed:", response.error);
+        alert("Payment failed: " + response.error.description);
+        setIsProcessing(false);
+      });
       paymentObject.open();
     } catch (error) {
       console.error("Payment error:", error);
+      alert("Payment initialization failed: " + error.message);
       setIsProcessing(false);
     }
   };
 
-  // Mock payment process for demo purposes
-  const handleMockPayment = () => {
+  const handleDemoPayment = () => {
     setIsProcessing(true);
-    
     // Simulate payment processing
     setTimeout(() => {
-      const mockPaymentId = "pay_" + Math.random().toString(36).substring(2, 15);
-      setPaymentId(mockPaymentId);
+      const demoPaymentId =
+        "DEMO-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+      setPaymentId(demoPaymentId);
       setIsProcessing(false);
       setIsComplete(true);
-      
-      // Store paymentId in session/local storage
-      sessionStorage.setItem('paymentId', mockPaymentId);
-      
-      // Wait 2 seconds before redirecting to invoice
+
+      // Store demo payment details
+      sessionStorage.setItem("paymentId", demoPaymentId);
+      sessionStorage.setItem("orderNumber", orderNumber);
+      sessionStorage.setItem("totalAmount", totalPrice);
+
       setTimeout(() => {
-        navigate('/invoice');
+        navigate("/invoice");
       }, 2000);
-    }, 1500);
+    }, 2000); // Simulate 2 second processing time
   };
 
   return (
     <div className="relative min-h-screen w-full bg-black overflow-hidden">
-      {/* Squares background */}
       <div className="absolute inset-0 z-0">
         <Squares
           direction="none"
@@ -152,31 +193,59 @@ const Payment = () => {
           ) : (
             <>
               <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 mb-6 border border-gray-800">
-                <h3 className="text-xl font-bold text-gray-100 mb-4">Order Summary</h3>
-                
+                <h3 className="text-xl font-bold text-gray-100 mb-4">
+                  Order Summary
+                </h3>
+
+                <div className="space-y-4 mb-6">
+                  {groupedItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex justify-between items-center pb-3 border-b border-gray-800"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-12 h-12 rounded-lg object-cover border border-gray-700"
+                        />
+                        <div>
+                          <p className="text-gray-200">{item.name}</p>
+                          <div className="flex space-x-4 text-sm text-gray-400">
+                            <p>
+                              ₹{item.price.toFixed(2)} × {item.quantity}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium text-gray-200">
+                          ₹{(item.price * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between items-center pb-3 border-b border-gray-800">
                     <span className="text-gray-400">Order Number</span>
-                    <span className="font-medium text-gray-200">{orderNumber}</span>
+                    <span className="font-medium text-gray-200">
+                      {orderNumber}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Items ({cart.length})</span>
-                    <span className="font-medium text-gray-200">₹{totalPrice}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Delivery Fee</span>
-                    <span className="font-medium text-gray-200">₹0.00</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Tax</span>
-                    <span className="font-medium text-gray-200">₹0.00</span>
+                    <span className="font-medium text-gray-200">
+                      ₹{totalPrice}
+                    </span>
                   </div>
                 </div>
-                
+
                 <div className="border-t border-gray-800 pt-4 mt-4">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-300">
-                      Total
+                      Total Amount
                     </span>
                     <span className="text-lg font-bold text-white">
                       ₹{totalPrice}
@@ -185,16 +254,22 @@ const Payment = () => {
                 </div>
               </div>
 
-              <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 mb-6 border border-gray-800">
-                <h3 className="text-xl font-bold text-gray-100 mb-4">Payment Method</h3>
-                
+              <div className="bg-black bg-opacity-80 rounded-lg shadow-md p-6 border border-gray-800">
+                <h3 className="text-xl font-bold text-gray-100 mb-4">
+                  Payment Method
+                </h3>
+
                 {isComplete ? (
                   <div className="text-center py-6">
                     <div className="flex justify-center mb-4">
                       <FiCheckCircle className="text-green-500" size={60} />
                     </div>
-                    <h4 className="text-xl font-bold text-green-500 mb-2">Payment Successful!</h4>
-                    <p className="text-gray-400 mb-2">Payment ID: {paymentId}</p>
+                    <h4 className="text-xl font-bold text-green-500 mb-2">
+                      Payment Successful!
+                    </h4>
+                    <p className="text-gray-400 mb-2">
+                      Payment ID: {paymentId}
+                    </p>
                     <p className="text-gray-400">Redirecting to invoice...</p>
                   </div>
                 ) : (
@@ -206,9 +281,25 @@ const Payment = () => {
                     >
                       {isProcessing ? (
                         <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Processing...
                         </span>
@@ -219,23 +310,49 @@ const Payment = () => {
                         </span>
                       )}
                     </button>
-                    
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-700"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-black text-gray-400">Or</span>
+                      </div>
+                    </div>
+
                     <button
-                      onClick={handleMockPayment}
+                      onClick={handleDemoPayment}
                       disabled={isProcessing}
-                      className="w-full px-6 py-4 rounded-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white font-medium hover:from-gray-700 hover:to-gray-600 transition-all duration-300 flex justify-center items-center"
+                      className="w-full px-6 py-4 rounded-lg border border-gray-700 text-gray-300 font-medium hover:bg-gray-900 transition-all duration-300 flex justify-center items-center"
                     >
                       {isProcessing ? (
                         <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
                           </svg>
                           Processing...
                         </span>
                       ) : (
                         <span className="flex items-center">
-                          Demo Payment (Skip)
+                          <FiCreditCard className="mr-2" />
+                          Demo Payment
                         </span>
                       )}
                     </button>
